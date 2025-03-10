@@ -23,9 +23,8 @@ namespace RevivalMod
             LogSource.LogInfo("Revival plugin loaded!");
 
             // uncomment line(s) below to enable desired example patch, then press F6 to build the project:
-             new DeathPatch().Enable();
-            new InventoryPatch().Enable();
-            new DamageInterceptorPatch().Enable();
+             new DamageInfoPatch().Enable();
+            new DeathPatch().Enable();
         }
     }
 }

@@ -108,10 +108,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants\Constants.cs" />
-    <Compile Include="ExamplePatches\DamagePatch.cs" />
+    <Compile Include="ExamplePatches\DamageInfoPatch.cs" />
     <Compile Include="ExamplePatches\DeathPatch.cs" />
-    <Compile Include="ExamplePatches\InventoryPatch.cs" />
-    <Compile Include="ExamplePatches\JumpPatch.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
