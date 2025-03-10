@@ -7,13 +7,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using RevivalMod.Constants;
+using RevivalMod.Features;
 using EFT.InventoryLogic;
 using UnityEngine;
 
 namespace RevivalMod.ExamplePatches
 {
-    // First patch to intercept damage and reduce it
-    internal class DamageInfoPatch : ModulePatch
+    // Updated patch to intercept damage and work with the new revival system
+    internal class UpdatedDamageInfoPatch : ModulePatch
     {
         // Track players in critical state to prevent endless loops
         private static Dictionary<string, long> _playersInCriticalState = new Dictionary<string, long>();
@@ -21,7 +22,7 @@ namespace RevivalMod.ExamplePatches
 
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(Player), "ApplyDamageInfo");
+            return AccessTools.Method(typeof(Player), nameof(Player.ApplyDamageInfo));
         }
 
         [PatchPrefix]
@@ -36,6 +37,14 @@ namespace RevivalMod.ExamplePatches
                 }
 
                 string playerId = __instance.ProfileId;
+
+                // Check if player is invulnerable from recent revival
+                if (RevivalFeatureExtension.IsPlayerInvulnerable(playerId))
+                {
+                    Plugin.LogSource.LogInfo($"Player {playerId} is invulnerable, blocking all damage");
+                    damageInfo.Damage = 0f;
+                    return true;
+                }
 
                 // Check for critical damage
                 bool isVitalPart = bodyPartType == EBodyPart.Head || bodyPartType == EBodyPart.Chest;
@@ -66,33 +75,26 @@ namespace RevivalMod.ExamplePatches
                         // Record that player is now in critical state
                         _playersInCriticalState[playerId] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                        Plugin.LogSource.LogInfo($"Critical damage detected to {bodyPartType} from {damageInfo.DamageType}");
+                        // Set the player in critical state for the revival system
+                        RevivalFeatureExtension.SetPlayerCriticalState(__instance, true);
+
+                        Plugin.LogSource.LogInfo($"Critical damage detected to {bodyPartType} from {damageInfo.DamageType}. Player entered critical state.");
 
                         // For heavy bleeding, we want to let some damage through but prevent death
                         if (isCriticalBleed)
                         {
                             // Allow minimal damage for bleeding effects to apply, but not kill
                             damageInfo.Damage = 5f;
-
-                            // Apply emergency treatment after allowing minimal damage
-                            Plugin.LogSource.LogInfo("Allowing minimal bleeding damage, then treating player");
-
-                            // Schedule treatment to occur after damage applies
-                            __instance.StartCoroutine(EmergencyTreatmentCoroutine(__instance, bodyPartType));
-
+                            Plugin.LogSource.LogInfo("Allowing minimal bleeding damage, player is in critical state");
                             return true;
                         }
 
-                        // For lethal damage, try to prevent most of it
+                        // For lethal damage, try to prevent most of it but keep player in critical state
                         if (isLethalDamage)
                         {
                             // Let a small amount through to trigger effects but prevent death
                             damageInfo.Damage = Math.Min(10f, damageInfo.Damage);
-
-                            // Apply emergency treatment
-                            EmergencyTreatment(__instance, bodyPartType);
-
-                            Plugin.LogSource.LogInfo($"Reduced lethal damage to {damageInfo.Damage}");
+                            Plugin.LogSource.LogInfo($"Reduced lethal damage to {damageInfo.Damage}, player is in critical state");
                             return true;
                         }
                     }
@@ -100,102 +102,10 @@ namespace RevivalMod.ExamplePatches
             }
             catch (Exception ex)
             {
-                Plugin.LogSource.LogError($"Error in DamageInfo patch: {ex.Message}");
+                Plugin.LogSource.LogError($"Error in UpdatedDamageInfo patch: {ex.Message}");
             }
 
             return true; // Let original method run
         }
-
-        private static System.Collections.IEnumerator EmergencyTreatmentCoroutine(Player player, EBodyPart bodyPart)
-        {
-            // Wait a short time to allow the damage to be applied
-            yield return new WaitForSeconds(0.2f);
-
-            // Then apply emergency treatment
-            EmergencyTreatment(player, bodyPart);
-        }
-
-        private static void EmergencyTreatment(Player player, EBodyPart bodyPart)
-        {
-            try
-            {
-                Plugin.LogSource.LogInfo($"Applying emergency treatment for {bodyPart}");
-
-                // Get the ActiveHealthController
-                ActiveHealthController healthController = player.ActiveHealthController;
-                if (healthController == null)
-                {
-                    Plugin.LogSource.LogError("Could not get ActiveHealthController");
-                    return;
-                }
-
-                // First remove negative effects
-                RemoveAllNegativeEffects(healthController);
-
-                // Apply direct healing
-                ApplyDirectHealing(player, healthController);
-
-                // Apply painkillers
-                healthController.DoPainKiller();
-
-                Plugin.LogSource.LogInfo("Emergency treatment applied");
-            }
-            catch (Exception ex)
-            {
-                Plugin.LogSource.LogError($"Error in emergency treatment: {ex.Message}");
-            }
-        }
-
-        private static void RemoveAllNegativeEffects(ActiveHealthController healthController)
-        {
-            try
-            {
-                MethodInfo removeNegativeEffectsMethod = AccessTools.Method(typeof(ActiveHealthController), "RemoveNegativeEffects");
-                if (removeNegativeEffectsMethod != null)
-                {
-                    foreach (EBodyPart bodyPart in Enum.GetValues(typeof(EBodyPart)))
-                    {
-                        try
-                        {
-                            removeNegativeEffectsMethod.Invoke(healthController, new object[] { bodyPart });
-                        }
-                        catch { }
-                    }
-                    Plugin.LogSource.LogInfo("Removed all negative effects from player");
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.LogSource.LogError($"Error removing effects: {ex.Message}");
-            }
-        }
-
-        private static void ApplyDirectHealing(Player player, ActiveHealthController healthController)
-        {
-            try
-            {
-                // Use ChangeHealth for all body parts
-                healthController.ChangeHealth(EBodyPart.Head, 50f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.Chest, 50f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.LeftArm, 30f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.RightArm, 30f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.LeftLeg, 30f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.RightLeg, 30f, new DamageInfoStruct());
-                healthController.ChangeHealth(EBodyPart.Stomach, 30f, new DamageInfoStruct());
-
-                // Restore energy and hydration
-                healthController.ChangeEnergy(50f);
-                healthController.ChangeHydration(50f);
-
-                Plugin.LogSource.LogInfo("Applied direct healing to all body parts");
-            }
-            catch (Exception ex)
-            {
-                Plugin.LogSource.LogError($"Error applying direct healing: {ex.Message}");
-            }
-        }
     }
-
-    // Second patch as a last line of defense to prevent death
-    
 }

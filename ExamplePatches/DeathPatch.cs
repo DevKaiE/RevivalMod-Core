@@ -7,15 +7,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using RevivalMod.Constants;
+using RevivalMod.Features;
 using EFT.InventoryLogic;
 
 namespace RevivalMod.ExamplePatches
 {
-    internal class DeathPatch : ModulePatch
+    internal class UpdatedDeathPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
-            return AccessTools.Method(typeof(ActiveHealthController), "Kill");
+            return AccessTools.Method(typeof(ActiveHealthController), nameof(ActiveHealthController.Kill));
         }
 
         [PatchPrefix]
@@ -30,6 +31,15 @@ namespace RevivalMod.ExamplePatches
                 Player player = playerField.GetValue(__instance) as Player;
                 if (player == null) return true;
 
+                string playerId = player.ProfileId;
+
+                // Check if player is invulnerable from recent revival
+                if (RevivalFeatureExtension.IsPlayerInvulnerable(playerId))
+                {
+                    Plugin.LogSource.LogInfo($"Player {playerId} is invulnerable, blocking death completely");
+                    return false; // Block the kill completely
+                }
+
                 Plugin.LogSource.LogInfo($"DEATH PREVENTION: Player {player.ProfileId} about to die from {damageType}");
 
                 // Check if the player has the revival item
@@ -40,12 +50,13 @@ namespace RevivalMod.ExamplePatches
 
                 if (hasDefib || Constants.Constants.TESTING)
                 {
-                    Plugin.LogSource.LogInfo("DEATH PREVENTION: Blocking death completely");
+                    Plugin.LogSource.LogInfo("DEATH PREVENTION: Setting player to critical state instead of death");
 
-                    // Final emergency treatment as last resort
-                    FinalEmergencyTreatment(__instance, player);
+                    // Set the player in critical state for the revival system
+                    RevivalFeatureExtension.SetPlayerCriticalState(player, true);
 
-                    return false; // Block the kill completely
+                    // Block the kill completely
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -54,73 +65,6 @@ namespace RevivalMod.ExamplePatches
             }
 
             return true;
-        }
-
-        private static void FinalEmergencyTreatment(ActiveHealthController healthController, Player player)
-        {
-            try
-            {
-                // Try all possible methods to revive the player
-
-                // 1. Remove all negative effects first
-                MethodInfo removeNegEffectsMethod = AccessTools.Method(typeof(ActiveHealthController), "RemoveNegativeEffects");
-                if (removeNegEffectsMethod != null)
-                {
-                    foreach (EBodyPart bodyPart in Enum.GetValues(typeof(EBodyPart)))
-                    {
-                        try
-                        {
-                            removeNegEffectsMethod.Invoke(healthController, new object[] { bodyPart });
-                        }
-                        catch { }
-                    }
-                }
-
-                // 2. Try to restore full health if the method exists
-                MethodInfo restoreFullHealthMethod = AccessTools.Method(typeof(ActiveHealthController), "RestoreFullHealth");
-                if (restoreFullHealthMethod != null)
-                {
-                    try
-                    {
-                        restoreFullHealthMethod.Invoke(healthController, null);
-                    }
-                    catch { }
-                }
-
-                // 3. Direct health change as backup
-                foreach (EBodyPart bodyPart in Enum.GetValues(typeof(EBodyPart)))
-                {
-                    if (bodyPart != EBodyPart.Common)
-                    {
-                        try
-                        {
-                            healthController.ChangeHealth(bodyPart, 100f, new DamageInfoStruct());
-                        }
-                        catch { }
-                    }
-                }
-
-                // 4. Energy and hydration
-                try
-                {
-                    healthController.ChangeEnergy(100f);
-                    healthController.ChangeHydration(100f);
-                }
-                catch { }
-
-                // 5. Apply painkillers
-                try
-                {
-                    healthController.DoPainKiller();
-                }
-                catch { }
-
-                Plugin.LogSource.LogInfo("DEATH PREVENTION: Applied final emergency treatment");
-            }
-            catch (Exception ex)
-            {
-                Plugin.LogSource.LogError($"Error in final emergency treatment: {ex.Message}");
-            }
         }
     }
 }

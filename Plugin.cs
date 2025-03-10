@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using RevivalMod.ExamplePatches;
+using RevivalMod.Features;
 
 namespace RevivalMod
 {
@@ -22,9 +23,12 @@ namespace RevivalMod
             LogSource = Logger;
             LogSource.LogInfo("Revival plugin loaded!");
 
-            // uncomment line(s) below to enable desired example patch, then press F6 to build the project:
-             new DamageInfoPatch().Enable();
-            new DeathPatch().Enable();
+            // Enable patches
+            new UpdatedDamageInfoPatch().Enable();
+            new UpdatedDeathPatch().Enable();
+            new RevivalFeatureExtension().Enable();
+
+            LogSource.LogInfo("Revival plugin initialized! Press F5 to use your defibrillator when in critical state.");
         }
     }
 }
