@@ -38,12 +38,13 @@ namespace RevivalMod.ExamplePatches
 
                 string playerId = __instance.ProfileId;
 
-                // Check if player is invulnerable from recent revival
+                // Check if player is invulnerable from revival or in critical state
                 if (RevivalFeatureExtension.IsPlayerInvulnerable(playerId))
                 {
                     Plugin.LogSource.LogInfo($"Player {playerId} is invulnerable, blocking all damage");
                     damageInfo.Damage = 0f;
-                    return true;
+                    // Don't even run the original method - completely block all damage
+                    return false;
                 }
 
                 // Check for critical damage

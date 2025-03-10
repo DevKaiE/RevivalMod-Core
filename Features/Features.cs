@@ -20,7 +20,7 @@ namespace RevivalMod.Features
     internal class RevivalFeatureExtension : ModulePatch
     {
         // Constants for configuration
-        private const float INVULNERABILITY_DURATION = 10f; // Duration of invulnerability in seconds
+        private const float INVULNERABILITY_DURATION = 10f; // Duration of invulnerability after revival in seconds
         private const KeyCode MANUAL_REVIVAL_KEY = KeyCode.F5; // Key to trigger manual revival
         private const float REVIVAL_COOLDOWN = 180f; // Cooldown between revivals (3 minutes)
 
@@ -29,6 +29,7 @@ namespace RevivalMod.Features
         private static Dictionary<string, bool> _playerInCriticalState = new Dictionary<string, bool>();
         private static Dictionary<string, bool> _playerIsInvulnerable = new Dictionary<string, bool>();
         private static Dictionary<string, float> _playerInvulnerabilityTimers = new Dictionary<string, float>();
+        private static Dictionary<string, float> _criticalModeTags = new Dictionary<string, float>(); // Keep track of players with stealth tag applied
 
         // Visual effects
         private static GameObject _screenFX;
@@ -91,22 +92,93 @@ namespace RevivalMod.Features
             // Update critical state
             _playerInCriticalState[playerId] = criticalState;
 
-            if (criticalState && player.IsYourPlayer)
+            if (criticalState)
             {
-                // Apply visual effects for critical state
-                ApplyCriticalStateVisuals(player);
+                // Make player invulnerable while in critical state too
+                _playerIsInvulnerable[playerId] = true;
 
-                // Show revival message
-                NotificationManagerClass.DisplayMessageNotification(
-                    "CRITICAL CONDITION! Press F5 to use your defibrillator!",
-                    ENotificationDurationType.Infinite,
-                    ENotificationIconType.Default,
-                    Color.red);
+                // Make player invisible to AI
+                ApplyStealthToPlayer(player);
+
+                if (player.IsYourPlayer)
+                {
+                    try
+                    {
+                        // Apply visual effects for critical state
+                        ApplyCriticalStateVisuals(player);
+
+                        // Show revival message
+                        NotificationManagerClass.DisplayMessageNotification(
+                            "CRITICAL CONDITION! Press F5 to use your defibrillator!",
+                            ENotificationDurationType.Infinite,
+                            ENotificationIconType.Default,
+                            Color.red);
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.LogSource.LogError($"Error displaying critical state UI: {ex.Message}");
+                    }
+                }
             }
-            else if (!criticalState && player.IsYourPlayer)
+            else
             {
-                // Remove critical state visuals
-                RemoveCriticalStateVisuals();
+                if (player.IsYourPlayer)
+                {
+                    // Remove critical state visuals
+                    RemoveCriticalStateVisuals();
+                }
+
+                // If player is leaving critical state without revival (e.g., revival failed),
+                // make sure to remove stealth from player and disable invulnerability
+                if (!_playerInvulnerabilityTimers.ContainsKey(playerId))
+                {
+                    RemoveStealthFromPlayer(player);
+                    _playerIsInvulnerable.Remove(playerId);
+                }
+            }
+        }
+
+        // Method to make player invisible to AI
+        private static void ApplyStealthToPlayer(Player player)
+        {
+            try
+            {
+                string playerId = player.ProfileId;
+
+                // Skip if already applied
+                if (_criticalModeTags.ContainsKey(playerId))
+                    return;
+
+                // Set awareness to 0 to make bots not detect the player
+                _criticalModeTags[playerId] = player.Awareness;
+                player.Awareness = 0f;
+
+                Plugin.LogSource.LogInfo($"Applied stealth mode to player {playerId}");
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogSource.LogError($"Error applying stealth mode: {ex.Message}");
+            }
+        }
+
+        // Method to remove invisibility from player
+        private static void RemoveStealthFromPlayer(Player player)
+        {
+            try
+            {
+                string playerId = player.ProfileId;
+
+                // Restore player's original awareness level
+                if (_criticalModeTags.TryGetValue(playerId, out float awareness))
+                {
+                    player.Awareness = awareness;
+                    _criticalModeTags.Remove(playerId);
+                    Plugin.LogSource.LogInfo($"Removed stealth mode from player {playerId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogSource.LogError($"Error removing stealth mode: {ex.Message}");
             }
         }
 
@@ -311,6 +383,9 @@ namespace RevivalMod.Features
             // Remove visual effects
             RemoveInvulnerabilityVisuals(player);
 
+            // Remove stealth from player
+            RemoveStealthFromPlayer(player);
+
             // Show notification that invulnerability has ended
             if (player.IsYourPlayer)
             {
@@ -328,33 +403,87 @@ namespace RevivalMod.Features
         {
             string playerId = player.ProfileId;
             float flashInterval = 0.5f; // Flash every half second
+            bool isVisible = true; // Track visibility state
 
-            while (_playerIsInvulnerable.TryGetValue(playerId, out bool isInvulnerable) && isInvulnerable)
+            // Store original visibility states of all renderers
+            Dictionary<Renderer, bool> originalStates = new Dictionary<Renderer, bool>();
+
+            // First ensure player is visible to start
+            if (player.PlayerBody != null && player.PlayerBody.BodySkins != null)
             {
-                // Toggle player visibility for the flashing effect
-                if (player.PlayerBody != null && player.PlayerBody.BodySkins != null)
+                foreach (var kvp in player.PlayerBody.BodySkins)
                 {
-                    foreach (var renderer in player.PlayerBody.BodySkins)
+                    if (kvp.Value != null)
                     {
-                        if (renderer.Value != null)
+                        var renderers = kvp.Value.GetComponentsInChildren<Renderer>(true);
+                        foreach (var renderer in renderers)
                         {
-                            bool currentState = renderer.Value.IsVisible();
-                            renderer.Value.EnableRenderers(!currentState);
+                            if (renderer != null)
+                            {
+                                originalStates[renderer] = renderer.enabled;
+                                renderer.enabled = true;
+                            }
                         }
                     }
+                }
+            }
+
+            // Now flash the player model
+            while (_playerIsInvulnerable.TryGetValue(playerId, out bool isInvulnerable) && isInvulnerable)
+            {
+                try
+                {
+                    isVisible = !isVisible; // Toggle visibility
+
+                    // Apply visibility to all renderers in the player model
+                    if (player.PlayerBody != null && player.PlayerBody.BodySkins != null)
+                    {
+                        foreach (var kvp in player.PlayerBody.BodySkins)
+                        {
+                            if (kvp.Value != null)
+                            {
+                                var renderers = kvp.Value.GetComponentsInChildren<Renderer>(true);
+                                foreach (var renderer in renderers)
+                                {
+                                    if (renderer != null)
+                                    {
+                                        renderer.enabled = isVisible;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Plugin.LogSource.LogError($"Error in flash effect: {ex.Message}");
                 }
 
                 yield return new WaitForSeconds(flashInterval);
             }
 
-            // Ensure player is visible when effect ends
-            if (player.PlayerBody != null && player.PlayerBody.BodySkins != null)
+            // Always ensure player is visible when effect ends by restoring original states
+            try
             {
-                foreach (var renderer in player.PlayerBody.BodySkins)
+                foreach (var kvp in originalStates)
                 {
-                    if (renderer.Value != null)
+                    if (kvp.Key != null)
                     {
-                        renderer.Value.EnableRenderers(true);
+                        kvp.Key.enabled = true; // Force visibility on exit
+                    }
+                }
+            }
+            catch
+            {
+                // Last resort fallback if the dictionary approach fails
+                if (player.PlayerBody != null && player.PlayerBody.BodySkins != null)
+                {
+                    foreach (var kvp in player.PlayerBody.BodySkins)
+                    {
+                        if (kvp.Value != null)
+                        {
+                            kvp.Value.EnableRenderers(true);
+                        }
                     }
                 }
             }
@@ -362,39 +491,49 @@ namespace RevivalMod.Features
 
         private static void ApplyCriticalStateVisuals(Player player)
         {
-            try
-            {
-                // Create a red vignette effect on the screen
-                if (_screenFX == null && player.IsYourPlayer)
-                {
-                    //// Create a UI canvas for our effect
-                    //_screenFX = new GameObject("RevivalCriticalFX");
-                    //Canvas canvas = _screenFX.AddComponent<Canvas>();
-                    //canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                    //canvas.sortingOrder = 999; // Make sure it's on top
+            //try
+            //{
+            //    // Create a red vignette effect on the screen
+            //    if (_screenFX == null && player.IsYourPlayer)
+            //    {
+            //        // First ensure any existing _screenFX is properly destroyed
+            //        RemoveCriticalStateVisuals();
 
-                    // Create the vignette image
-                    GameObject imageObj = new GameObject("Vignette");
-                    imageObj.transform.SetParent(_screenFX.transform, false);
-                    UnityEngine.UI.Image image = imageObj.AddComponent<UnityEngine.UI.Image>();
+            //        // Create a UI canvas for our effect using GameObject.Find to get the existing canvas
+            //        _screenFX = new GameObject("RevivalCriticalFX");
+            //        Canvas canvas = _screenFX.AddComponent<Canvas>();
+            //        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            //        canvas.sortingOrder = 999; // Make sure it's on top
 
-                    // Create a pulsing red vignette effect
-                    image.color = new Color(1f, 0f, 0f, 0.3f);
+            //        // Create the vignette image
+            //        GameObject imageObj = new GameObject("Vignette");
+            //        imageObj.transform.SetParent(_screenFX.transform, false);
+            //        UnityEngine.UI.Image image = imageObj.AddComponent<UnityEngine.UI.Image>();
 
-                    //// Set it to cover the whole screen
-                    //UnityEngine.UI.RectTransform rect = image.rectTransform;
-                    //rect.anchorMin = Vector2.zero;
-                    //rect.anchorMax = Vector2.one;
-                    //rect.sizeDelta = Vector2.zero;
+            //        // Create a pulsing red vignette effect
+            //        image.color = new Color(1f, 0f, 0f, 0.3f);
 
-                    // Start pulsing effect
-                    player.StartCoroutine(PulseEffect(image));
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.LogSource.LogError($"Error applying critical state visuals: {ex.Message}");
-            }
+            //        // Set active to ensure it's visible
+            //        _screenFX.SetActive(true);
+
+            //        // Start pulsing effect with a safer approach
+            //        if (player != null)
+            //        {
+            //            try
+            //            {
+            //                player.StartCoroutine(PulseEffect(image));
+            //            }
+            //            catch
+            //            {
+            //                // If coroutine fails, at least keep the static red overlay
+            //            }
+            //        }
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Plugin.LogSource.LogError($"Error applying critical state visuals: {ex.Message}");
+            //}
         }
 
         private static IEnumerator PulseEffect(UnityEngine.UI.Image image)
@@ -417,9 +556,25 @@ namespace RevivalMod.Features
 
         private static void RemoveCriticalStateVisuals()
         {
-            if (_screenFX != null)
+            try
             {
-                GameObject.Destroy(_screenFX);
+                if (_screenFX != null)
+                {
+                    GameObject.Destroy(_screenFX);
+                    _screenFX = null;
+                }
+
+                // Also try to find by name in case our reference is stale
+                var existingEffect = GameObject.Find("RevivalCriticalFX");
+                if (existingEffect != null)
+                {
+                    GameObject.Destroy(existingEffect);
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogSource.LogError($"Error removing critical state visuals: {ex.Message}");
+                // Still set reference to null to allow recreation
                 _screenFX = null;
             }
         }
@@ -436,9 +591,12 @@ namespace RevivalMod.Features
             {
                 foreach (var renderer in player.PlayerBody.BodySkins)
                 {
+                   
+
+                    // With this code block:
                     if (renderer.Value != null)
                     {
-                        renderer.Value.EnableRenderers(true);
+                        renderer.Value.enabled = true;
                     }
                 }
             }
