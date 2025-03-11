@@ -69,7 +69,7 @@ namespace RevivalMod.Features
                 }
 
                 // Check for manual revival key press when in critical state
-                if (_playerInCriticalState.TryGetValue(playerId, out bool inCritical) && inCritical)
+                if (_playerInCriticalState.TryGetValue(playerId, out bool inCritical) && inCritical && Constants.Constants.SELF_REVIVAL)
                 {
                     if (Input.GetKeyDown(MANUAL_REVIVAL_KEY))
                     {

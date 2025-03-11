@@ -1,4 +1,5 @@
 ﻿using Comfort.Common;
+using Fika.Core.Coop.HostClasses;
 using Fika.Core.Coop.Utils;
 using Fika.Core.Modding;
 using Fika.Core.Modding.Events;
@@ -79,6 +80,11 @@ namespace RevivalMod.Fika
         {
             Plugin.LogSource.LogInfo("FikaWrapper: Subscribing to network manager event");
             FikaEventDispatcher.SubscribeEvent<FikaNetworkManagerCreatedEvent>(OnFikaNetManagerCreated);
+        }
+
+        public static void GetFikaPlayersInfo()
+        {
+            FikaGlobals.
         }
     }
 }

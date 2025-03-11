@@ -17,5 +17,6 @@ namespace RevivalMod.Constants
 
         // Set to true for testing without requiring an actual defibrillator item
         public const bool TESTING = false;
+        public const bool SELF_REVIVAL = true;
     }
 }
