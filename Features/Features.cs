@@ -11,6 +11,7 @@ using RevivalMod.Constants;
 using EFT.InventoryLogic;
 using UnityEngine;
 using EFT.Communications;
+using Comfort.Common;
 
 namespace RevivalMod.Features
 {
@@ -184,13 +185,42 @@ namespace RevivalMod.Features
 
         public static KeyValuePair<string, bool> CheckRevivalItemInRaidInventory()
         {
-            if (PlayerClient == null)
+            Plugin.LogSource.LogInfo("Checking for revival item in inventory");
+
+            try
+            {
+                if (PlayerClient == null)
+                {
+                    if (Singleton<GameWorld>.Instantiated)
+                    {
+                        PlayerClient = Singleton<GameWorld>.Instance.MainPlayer;
+                        Plugin.LogSource.LogInfo($"Initialized PlayerClient: {PlayerClient != null}");
+                    }
+                    else
+                    {
+                        Plugin.LogSource.LogWarning("GameWorld not instantiated yet");
+                        return new KeyValuePair<string, bool>(string.Empty, false);
+                    }
+                }
+
+                if (PlayerClient == null)
+                {
+                    Plugin.LogSource.LogError("PlayerClient is still null after initialization attempt");
+                    return new KeyValuePair<string, bool>(string.Empty, false);
+                }
+
+                string playerId = PlayerClient.ProfileId;
+                var inRaidItems = PlayerClient.Inventory.GetPlayerItems(EPlayerItems.Equipment);
+                bool hasItem = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
+
+                Plugin.LogSource.LogInfo($"Player {playerId} has revival item: {hasItem}");
+                return new KeyValuePair<string, bool>(playerId, hasItem);
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogSource.LogError($"Error checking revival item: {ex.Message}");
                 return new KeyValuePair<string, bool>(string.Empty, false);
-
-            var inRaidItems = PlayerClient.Inventory.GetPlayerItems(EPlayerItems.Equipment);
-            bool hasItem = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
-
-            return new KeyValuePair<string, bool>(PlayerClient.ProfileId, hasItem);
+            }
         }
 
 

@@ -1,11 +1,7 @@
 ﻿using Comfort.Common;
 using EFT;
-using EFT.Interactive;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace RevivalMod.Components
@@ -18,6 +14,10 @@ namespace RevivalMod.Components
         public Player Player { get; private set; }
         public GameWorld GameWorld { get; private set; }
         public GamePlayerOwner GamePlayerOwner { get; private set; }
+
+        // Dictionary to track players with revival items
+        public Dictionary<string, bool> InRaidPlayersWithItem = new Dictionary<string, bool>();
+
         public static RMSession Instance
         {
             get
@@ -26,38 +26,75 @@ namespace RevivalMod.Components
                 {
                     if (!Singleton<GameWorld>.Instantiated)
                     {
-                        throw new Exception("Can't get ModSession Instance when GameWorld is not instantiated!");
+                        Plugin.LogSource.LogError("Can't get ModSession Instance when GameWorld is not instantiated!");
+                        // Create a temporary instance for error resistance
+                        GameObject go = new GameObject("RMSessionTemp");
+                        _instance = go.AddComponent<RMSession>();
+                        return _instance;
                     }
 
-                    _instance = Singleton<GameWorld>.Instance.MainPlayer.gameObject.GetOrAddComponent<RMSession>();
+                    try
+                    {
+                        _instance = Singleton<GameWorld>.Instance.MainPlayer.gameObject.GetOrAddComponent<RMSession>();
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.LogSource.LogError($"Error creating RMSession: {ex.Message}");
+                        GameObject go = new GameObject("RMSessionError");
+                        _instance = go.AddComponent<RMSession>();
+                    }
                 }
                 return _instance;
             }
         }
 
-        public Dictionary<string, bool> InRaidPlayersWithItem = new();
-
-       
-
         private void Awake()
         {
-            GameWorld = Singleton<GameWorld>.Instance;
-            Player = GameWorld.MainPlayer;
-            GamePlayerOwner = Player.gameObject.GetComponent<GamePlayerOwner>();
+            try
+            {
+                if (Singleton<GameWorld>.Instantiated)
+                {
+                    GameWorld = Singleton<GameWorld>.Instance;
+                    Player = GameWorld.MainPlayer;
+                    if (Player != null)
+                    {
+                        GamePlayerOwner = Player.gameObject.GetComponent<GamePlayerOwner>();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.LogSource.LogError($"Error in RMSession.Awake: {ex.Message}");
+            }
         }
 
         public static void AddToInRaidPlayersWithItem(string playerId, bool hasItem)
         {
-            if (Instance.InRaidPlayersWithItem.ContainsKey(playerId))
+            if (string.IsNullOrEmpty(playerId))
             {
-                throw new Exception("Tried to add player to PlayerLookUp with a playerId that was already in the dictionary!");
+                Plugin.LogSource.LogError("Tried to add player with null or empty ID");
+                return;
             }
 
+            // Allow overwrites for updating item status
             Instance.InRaidPlayersWithItem[playerId] = hasItem;
+            Plugin.LogSource.LogInfo($"Player {playerId} item status set to {hasItem}");
         }
 
         public static bool GetHasPlayerRevivalItem(string playerId)
         {
+            if (string.IsNullOrEmpty(playerId))
+            {
+                Plugin.LogSource.LogError("Tried to check null or empty player ID");
+                return false;
+            }
+
+            if (!Instance.InRaidPlayersWithItem.ContainsKey(playerId))
+            {
+                Plugin.LogSource.LogWarning($"No record for player {playerId}, defaulting to false");
+                return false;
+            }
+
             return Instance.InRaidPlayersWithItem[playerId];
         }
     }
