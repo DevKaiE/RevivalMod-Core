@@ -105,12 +105,22 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\EscapeFromTarkov_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
+    <Reference Include="Fika.Core">
+      <HintPath>..\..\BepInEx\plugins\Fika.Core.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
-    <Compile Include="ExamplePatches\DamageInfoPatch.cs" />
-    <Compile Include="ExamplePatches\DeathPatch.cs" />
+    <Compile Include="Models\ServerDataPack.cs" />
+    <Compile Include="Patches\DamageInfoPatch.cs" />
+    <Compile Include="Patches\DeathPatch.cs" />
     <Compile Include="Features\Features.cs" />
+    <Compile Include="Fika\FikaInterface.cs" />
+    <Compile Include="Fika\FikaWrapper.cs" />
+    <Compile Include="Helpers\Packets.cs" />
+    <Compile Include="Helpers\Utils.cs" />
+    <Compile Include="Patches\GameStartedPatch.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

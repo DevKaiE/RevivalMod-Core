@@ -30,14 +30,14 @@ namespace RevivalMod.Features
         private static Dictionary<string, bool> _playerIsInvulnerable = new Dictionary<string, bool>();
         private static Dictionary<string, float> _playerInvulnerabilityTimers = new Dictionary<string, float>();
         private static Dictionary<string, float> _criticalModeTags = new Dictionary<string, float>(); // Keep track of players with stealth tag applied
-
+        private static Player PlayerClient { get; set; } = null;
         // Visual effects
         private static GameObject _screenFX;
 
         protected override MethodBase GetTargetMethod()
         {
             // We're patching the Update method of Player to constantly check for revival key press
-            return AccessTools.Method(typeof(Player), "UpdateTick");
+            return AccessTools.Method(typeof(Player), nameof(Player.UpdateTick));
         }
 
         [PatchPostfix]
@@ -46,7 +46,7 @@ namespace RevivalMod.Features
             try
             {
                 string playerId = __instance.ProfileId;
-
+                PlayerClient = __instance;
                 // Only proceed for the local player
                 if (!__instance.IsYourPlayer)
                     return;
@@ -110,7 +110,7 @@ namespace RevivalMod.Features
                         // Show revival message
                         NotificationManagerClass.DisplayMessageNotification(
                             "CRITICAL CONDITION! Press F5 to use your defibrillator!",
-                            ENotificationDurationType.Infinite,
+                            ENotificationDurationType.Long,
                             ENotificationIconType.Default,
                             Color.red);
                     }
@@ -182,6 +182,18 @@ namespace RevivalMod.Features
             }
         }
 
+        public static KeyValuePair<string, bool> CheckRevivalItemInRaidInventory()
+        {
+            if (PlayerClient == null)
+                return new KeyValuePair<string, bool>(string.Empty, false);
+
+            var inRaidItems = PlayerClient.Inventory.GetPlayerItems(EPlayerItems.Equipment);
+            bool hasItem = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
+
+            return new KeyValuePair<string, bool>(PlayerClient.ProfileId, hasItem);
+        }
+
+
         public static bool TryPerformManualRevival(Player player)
         {
             if (player == null)
@@ -190,8 +202,7 @@ namespace RevivalMod.Features
             string playerId = player.ProfileId;
 
             // Check if the player has the revival item
-            var inRaidItems = player.Inventory.GetPlayerItems(EPlayerItems.Equipment);
-            bool hasDefib = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
+            bool hasDefib = CheckRevivalItemInRaidInventory().Value;
 
             // Check if the revival is on cooldown
             bool isOnCooldown = false;
