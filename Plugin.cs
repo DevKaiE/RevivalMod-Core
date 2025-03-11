@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using RevivalMod.ExamplePatches;
 using RevivalMod.Features;
 using BepInEx.Bootstrap;
 using RevivalMod.Fika;
@@ -35,10 +34,11 @@ namespace RevivalMod
             LogSource.LogInfo("Revival plugin loaded!");
 
             // Enable patches
-            new UpdatedDamageInfoPatch().Enable();
-            new UpdatedDeathPatch().Enable();
-            new RevivalFeatureExtension().Enable();
+            new DamageInfoPatch().Enable();
+            new DeathPatch().Enable();
+            new RevivalFeatures().Enable();
             new GameStartedPatch().Enable();
+            new ShootingBlockerPatch().Enable();
 
             LogSource.LogInfo("Revival plugin initialized! Press F5 to use your defibrillator when in critical state.");
         }

@@ -81,10 +81,5 @@ namespace RevivalMod.Fika
             Plugin.LogSource.LogInfo("FikaWrapper: Subscribing to network manager event");
             FikaEventDispatcher.SubscribeEvent<FikaNetworkManagerCreatedEvent>(OnFikaNetManagerCreated);
         }
-
-        public static void GetFikaPlayersInfo()
-        {
-            FikaGlobals.
-        }
     }
 }

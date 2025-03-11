@@ -10,9 +10,9 @@ using RevivalMod.Constants;
 using RevivalMod.Features;
 using EFT.InventoryLogic;
 
-namespace RevivalMod.ExamplePatches
+namespace RevivalMod.Patches
 {
-    internal class UpdatedDeathPatch : ModulePatch
+    internal class DeathPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
@@ -34,7 +34,7 @@ namespace RevivalMod.ExamplePatches
                 string playerId = player.ProfileId;
 
                 // Check if player is invulnerable from recent revival
-                if (RevivalFeatureExtension.IsPlayerInvulnerable(playerId))
+                if (RevivalFeatures.IsPlayerInvulnerable(playerId))
                 {
                     Plugin.LogSource.LogInfo($"Player {playerId} is invulnerable, blocking death completely");
                     return false; // Block the kill completely
@@ -53,7 +53,7 @@ namespace RevivalMod.ExamplePatches
                     Plugin.LogSource.LogInfo("DEATH PREVENTION: Setting player to critical state instead of death");
 
                     // Set the player in critical state for the revival system
-                    RevivalFeatureExtension.SetPlayerCriticalState(player, true);
+                    RevivalFeatures.SetPlayerCriticalState(player, true);
 
                     // Block the kill completely
                     return false;

@@ -1,10 +1,12 @@
 ﻿using Newtonsoft.Json;
+using Comfort.Common;
 using SPT.Common.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
 
 namespace RevivalMod.Helpers
 {
@@ -31,6 +33,13 @@ namespace RevivalMod.Helpers
             }
 
             return RequestHandler.PutJson(url, json);
+        }
+
+        public static Player GetYourPlayer() {
+            Player player = Singleton<GameWorld>.Instance.MainPlayer;
+            if (player == null) return null;          
+            if (!player.IsYourPlayer) return null;
+            return player;
         }
 
     }
