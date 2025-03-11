@@ -9,6 +9,7 @@ using RevivalMod.ExamplePatches;
 using RevivalMod.Features;
 using BepInEx.Bootstrap;
 using RevivalMod.Fika;
+using RevivalMod.Patches;
 
 namespace RevivalMod
 {
@@ -37,11 +38,12 @@ namespace RevivalMod
             new UpdatedDamageInfoPatch().Enable();
             new UpdatedDeathPatch().Enable();
             new RevivalFeatureExtension().Enable();
+            new GameStartedPatch().Enable();
 
             LogSource.LogInfo("Revival plugin initialized! Press F5 to use your defibrillator when in critical state.");
         }
 
-        private void onEnable()
+        private void OnEnable()
         {
             FikaInterface.InitOnPluginEnabled();
         }

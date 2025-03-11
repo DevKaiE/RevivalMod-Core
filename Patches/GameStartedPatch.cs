@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace LockableDoors.Patches
+namespace RevivalMod.Patches
 {
     internal class GameStartedPatch : ModulePatch
     {
