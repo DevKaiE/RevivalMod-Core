@@ -19,3 +19,5 @@ export const Ragman: Trader = {id: "5ac3b934156ae10c4430e83c", name: "Ragman"};
 export const Jaeger: Trader = {id: "5c0647fdd443bc2504c2d371", name: "Jaeger"};
 export const Lighthousekeeper: Trader = {id: "638f541a29ffd1183d187f57", name: "Lighthousekeeper"};
 
+export const TRADERS: Trader[] = [Prapor, Therapist, Fence, Skier, Peacekeeper, Mechanic, Ragman, Jaeger, Lighthousekeeper];
+

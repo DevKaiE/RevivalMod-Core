@@ -6,15 +6,16 @@ import { DatabaseServer } from "@spt/servers/DatabaseServer";
 import { SaveServer } from "@spt/servers/SaveServer";
 import { StaticRouterModService } from "@spt/services/mod/staticRouter/StaticRouterModService";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
-import { ITEM_ID, Prapor, Trader } from "./constants";
+import { ITEM_ID, Prapor, Therapist, Trader, TRADERS } from "./constants";
 import { HttpResponseUtil } from "@spt/utils/HttpResponseUtil";
 import { JsonUtil } from "@spt/utils/JsonUtil";
+import config from "./config.json";
 
 class RevivalMod implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
     private mod: string = "RevivalMod";
     // Using the defibrillator item ID
     private defibId: string = ITEM_ID;
-    private trader: Trader = Prapor;
+    private trader: Trader = TRADERS.find(trader => trader.name === config.RevivalItem.Trading.Trader) || Therapist;
     
     // SPT Services
     private databaseServer: DatabaseServer;
@@ -135,7 +136,7 @@ class RevivalMod implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
             traderTables.assort.barter_scheme[uniqueItemId] = [
                 [
                     {
-                        count: 25000, // 25,000 rubles
+                        count: config.RevivalItem.Trading.AmountRoubles || 25000, // 25,000 rubles
                         _tpl: "5449016a4bdc2d6f028b456f" // Roubles
                     }
                 ]
