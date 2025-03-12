@@ -1,76 +1,78 @@
-# RevivalMod for SPT-AKI
+# RevivalMod for SPT-AKI 🚑
 
 ## Overview
-RevivalMod is a client-side mod for SPT-AKI (Single Player Tarkov) that adds a revival mechanic to the game. Instead of immediately dying when taking lethal damage, players enter a critical state and can use a designated medical item to revive themselves.
+RevivalMod adds a second-chance mechanic to Single Player Tarkov. Instead of immediately dying when taking lethal damage, you'll enter a critical state and can use a defibrillator to revive yourself and continue your raid.
 
 ## Features
-- **Critical State System**: Instead of dying instantly from lethal damage, players enter a critical state
-- **Manual Revival**: Press F5 while in critical state to use your defibrillator/medical item and revive yourself
-- **Temporary Invulnerability**: After revival, enjoy 10 seconds of invulnerability to get to safety
-- **AI Avoidance**: Bots will temporarily ignore you while in critical state
-- **Visual Indicators**: Clear notifications when entering critical state and during revival
-- **Cooldown System**: 3-minute cooldown between revivals for balance
+- **Critical State System**: Enter a weakened state instead of dying immediately
+- **Defibrillator Revival**: Press F5 while in critical state to revive using your defibrillator
+- **Post-Revival Protection**: Temporary invulnerability period after revival to get to safety
+- **AI Behavior Modification**: Bots ignore players in critical state
+- **Multiplayer Compatible**: Works with Fika Co-op mod
+- **Visual Indicators**: Clear notifications and visual effects for critical state and revival
+- **Balance Features**: Movement limitations during critical state and cooldown between revivals
 
 ## Requirements
-- SPT-AKI (compatible with latest version)
+- SPT-AKI (Latest version)
 - BepInEx
 
 ## Installation
-1. Download the latest release from GitHub
-2. Extract the `RevivalMod.dll` file to your `{SPT-AKI folder}/BepInEx/plugins/` directory
-3. Start the game and enjoy!
+1. Download the latest release ZIP from the Releases section
+2. Extract the contents to your SPT-AKI installation directory
+3. The mod will be automatically loaded when you start the game
+
+## How To Use
+1. **Preparation**: Make sure you have a defibrillator (ID: 60540bddd93c884912009818) in your inventory
+2. **Critical State**: When you would normally die, you'll enter critical state instead
+3. **Revival**: Press F5 to use your defibrillator while in critical state
+4. **Recovery**: After revival, you'll have temporary invulnerability but reduced movement speed
+5. **Cooldown**: There's a 3-minute cooldown between uses of the revival system
 
 ## Configuration
-The mod includes some configurable options in the `Constants.cs` file:
+You can modify the following settings in the `Constants.cs` file:
 
 ```csharp
-// Change this ID to a defibrillator if available, or keep it as a bandage for testing
-// Defibrillator ID from Escape from Tarkov: "60540bddd93c884912009818"
-// Personal medkit ID: "5e99711486f7744bfc4af328"
-// CMS kit ID: "5d02778e86f774203e7dedbe"
-// Bandage ID for testing: "544fb25a4bdc2dfb738b4567"
-public const string ITEM_ID = "544fb25a4bdc2dfb738b4567"; // Using bandage for testing purposes
+// Change which item works as a revival tool
+public const string ITEM_ID = "60540bddd93c884912009818"; // Default: Defibrillator
 
-// Set to true for testing without requiring an actual defibrillator item
+// Set to true for testing without requiring the actual item
 public const bool TESTING = false;
+
+// Enable/disable self-revival
+public const bool SELF_REVIVAL = true;
 ```
 
-You can modify the following settings:
-- `ITEM_ID`: Choose which item will function as the revival item
-- `TESTING`: Set to `true` if you want to test without consuming any items
-
 Additional settings in `Features.cs`:
-- `INVULNERABILITY_DURATION`: Duration of invulnerability after revival (default: 10 seconds)
-- `MANUAL_REVIVAL_KEY`: Key to trigger manual revival (default: F5)
-- `REVIVAL_COOLDOWN`: Cooldown between revivals (default: 180 seconds/3 minutes)
+- `INVULNERABILITY_DURATION`: Duration of post-revival invulnerability (default: 4 seconds)
+- `MANUAL_REVIVAL_KEY`: Key to trigger revival (default: F5)
+- `REVIVAL_COOLDOWN`: Time between revivals (default: 180 seconds)
 
-## How to Use
-1. Make sure you have the required revival item in your inventory (default: bandage for testing)
-2. When taking lethal damage, you'll enter critical state instead of dying
-3. A notification will appear instructing you to press F5 to use your revival item
-4. After pressing F5, you'll be revived with:
-   - Full health restoration
-   - Negative effects removed
-   - 10 seconds of invulnerability
-   - Energy and hydration restored
+## Multiplayer Support
+When using the Fika Co-op mod, RevivalMod will synchronize player states:
+- All players will see when someone enters critical state
+- Revival status is shared between players
+- Defibrillator item requirements are checked server-side
 
 ## Known Issues
-- Visual effects for critical state are currently disabled in code
-- Some post-revival visual effects may not work perfectly in all conditions
+- Visual effects may occasionally flicker or not display properly
+- Some interactions between revival state and certain game mechanics may cause unexpected behavior
+
+## Troubleshooting
+- **Revival not working**: Ensure you have a defibrillator in your inventory
+- **Still dying instantly**: Check logs for errors and make sure the mod is properly installed
+- **Performance issues**: The mod has minimal performance impact, but disable if experiencing problems
 
 ## Credits
-- Created by KaiKiNoodles
-- Based on the SPT-AKI Client Mod Examples
+- Developed by KaiKiNoodles
+- Special thanks to the SPT-AKI development team
+- Fika Co-op integration support from the Fika team
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Contributing
-Contributions are welcome! Feel free to submit pull requests or open issues on the GitHub repository.
+## Support
+If you encounter any issues or have suggestions for improvement, please open an issue on the GitHub repository or contact me through the SPT-AKI Discord.
 
-## Changelog
-- v1.0.0: Initial release
-  - Added critical state system
-  - Added manual revival feature
-  - Added temporary invulnerability
-  - Added AI avoidance during critical state
+---
+
+*Note: This mod is not affiliated with or endorsed by Battlestate Games. Use at your own risk in accordance with the SPT-AKI project guidelines.*
