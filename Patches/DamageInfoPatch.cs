@@ -49,6 +49,19 @@ namespace RevivalMod.Patches
                     return false;
                 }
 
+                if (RevivalFeatures.IsPlayerInCriticalState(playerId))
+                {
+                    // Allow minimal damage for visual/audio feedback but not enough to kill
+                    // This creates a sense that hits are still occurring but not fatal
+                    damageInfo.Damage = Math.Min(0.5f, damageInfo.Damage);
+
+                    // Log that we're reducing damage for player in critical state
+                    Plugin.LogSource.LogInfo($"Player {playerId} is in critical state, reducing damage to {damageInfo.Damage}");
+
+                    // Let the reduced damage through
+                    return true;
+                }
+
                 // Check for critical damage
                 bool isVitalPart = bodyPartType == EBodyPart.Head || bodyPartType == EBodyPart.Chest;
                 bool isLethalDamage = damageInfo.Damage > 35f || (isVitalPart && damageInfo.Damage > 20f);

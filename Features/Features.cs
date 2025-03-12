@@ -37,6 +37,8 @@ namespace RevivalMod.Features
         private static Dictionary<string, float> _playerInvulnerabilityTimers = new Dictionary<string, float>();
         private static Dictionary<string, float> _originalAwareness = new Dictionary<string, float>(); // Renamed from _criticalModeTags
         private static Dictionary<string, float> _originalMovementSpeed = new Dictionary<string, float>(); // Store original movement speed
+        private static Dictionary<string, bool> _originalSprintSettings = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _originalJumpSettings = new Dictionary<string, bool>();
         private static Player PlayerClient { get; set; } = null;
 
         // Store original physical state
@@ -112,6 +114,11 @@ namespace RevivalMod.Features
             {
                 Plugin.LogSource.LogError($"Error in RevivalFeatureExtension patch: {ex.Message}");
             }
+        }
+
+        public static bool IsPlayerInCriticalState(string playerId)
+        {
+            return _playerInCriticalState.TryGetValue(playerId, out bool inCritical) && inCritical;
         }
 
         public static void SetPlayerCriticalState(Player player, bool criticalState)
@@ -190,21 +197,33 @@ namespace RevivalMod.Features
                     _originalMovementSpeed[playerId] = player.Physical.WalkSpeedLimit;
                 }
 
-                // Store original physical condition
-                //if (!_originalPhysicalCondition.ContainsKey(playerId))
-                //{
-                //    _originalPhysicalCondition[playerId] = player.Physical.PhysicalCondition;
-                //}
-
                 // Apply tremor effect
                 player.ActiveHealthController.DoContusion(INVULNERABILITY_DURATION, 1f);
                 player.ActiveHealthController.DoStun(INVULNERABILITY_DURATION / 2, 1f);
 
-                // Slow movement speed
-                player.Physical.WalkSpeedLimit = _originalMovementSpeed[playerId] * MOVEMENT_SPEED_MULTIPLIER;
+                // Severe movement restrictions - extremely slow movement
+                player.Physical.WalkSpeedLimit = _originalMovementSpeed[playerId] * 0.05f; // Only 5% of normal speed
 
-                // Set physical condition to limit movement
-                //player.Physical.PhysicalCondition = EPhysicalCondition.Injured;
+                // Restrict player to crouch-only
+                if (player.MovementContext != null)
+                {
+                    // Force crouch
+                    player.MovementContext.SetPoseLevel(0);
+
+                    // Disable sprinting
+                    player.ActiveHealthController.AddFatigue();
+                    player.ActiveHealthController.SetStaminaCoeff(0f);
+                    //// Force movement state to be limited
+                    //typeof(EFT.Player.MovementContext).GetMethod("AddStateSpeedLimit",
+                    //    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    //    ?.Invoke(player.MovementContext, new object[] { "critical_state", 0.05f });
+                }
+
+                // Disable jumping if possible
+                //SetCanJump(player, false);
+
+                // Apply visual effects - heavy blurring and darkening of screen edges
+                // (Note: actual implementation would need to use game's visual effect system)
 
                 Plugin.LogSource.LogInfo($"Applied critical effects to player {playerId}");
             }
@@ -244,6 +263,7 @@ namespace RevivalMod.Features
         }
 
         // Method to make player invisible to AI - improved implementation
+        // Replace the ApplyStealthToPlayer method in Features.cs with this improved version
         private static void ApplyStealthToPlayer(Player player)
         {
             try
@@ -260,12 +280,51 @@ namespace RevivalMod.Features
                 // Set awareness to 0 to make bots not detect the player
                 player.Awareness = 0f;
 
-                // Additional measures to hide from AI
-                // Set this directly in the game object to avoid detection
-                var stealthField = AccessTools.Field(typeof(Player), "StealthLevel");
-                if (stealthField != null)
+                // Directly access person visibility to make sure bots don't see player
+                var personField = AccessTools.Field(typeof(Player), "_person");
+                if (personField != null)
                 {
-                    stealthField.SetValue(player, 100f); // Maximum stealth level
+                    var person = personField.GetValue(player);
+                    if (person != null)
+                    {
+                        var visibilityField = AccessTools.Field(person.GetType(), "_visibility");
+                        if (visibilityField != null)
+                        {
+                            // Set visibility to 0 to make player completely invisible to AI
+                            visibilityField.SetValue(person, 0f);
+                        }
+                    }
+                }
+
+                // Set PlayerHealthController.IsAlive to false for AI perception
+                // This is a key part - bots typically won't target "dead" players
+                var healthControllerField = AccessTools.Field(typeof(Player), "HealthController");
+                if (healthControllerField != null)
+                {
+                    var healthController = healthControllerField.GetValue(player);
+                    if (healthController != null)
+                    {
+                        // Use reflection to access a private method or field that can affect AI perception
+                        // without actually killing the player
+                        var isAliveProperty = AccessTools.Property(healthController.GetType(), "IsAlive");
+                        if (isAliveProperty != null)
+                        {
+                            // We don't want to actually set IsAlive to false as it would cause other issues
+                            // So instead, we'll look for AI perception related fields
+                            var perceptionField = AccessTools.Field(healthController.GetType(), "_aiVisibleDeathTime");
+                            if (perceptionField != null)
+                            {
+                                perceptionField.SetValue(healthController, Time.time);
+                            }
+                        }
+                    }
+                }
+
+                // Set Aggressor to null so bots won't target player
+                var aggressorField = AccessTools.Field(typeof(Player), "Aggressor");
+                if (aggressorField != null)
+                {
+                    aggressorField.SetValue(player, null);
                 }
 
                 Plugin.LogSource.LogInfo($"Applied improved stealth mode to player {playerId}");

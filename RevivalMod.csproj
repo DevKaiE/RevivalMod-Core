@@ -113,6 +113,7 @@
     <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
     <Compile Include="Models\ServerDataPack.cs" />
+    <Compile Include="Patches\BotBehaviour.cs" />
     <Compile Include="Patches\DamageInfoPatch.cs" />
     <Compile Include="Patches\DeathPatch.cs" />
     <Compile Include="Features\Features.cs" />

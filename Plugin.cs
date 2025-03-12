@@ -39,6 +39,7 @@ namespace RevivalMod
             new RevivalFeatures().Enable();
             new GameStartedPatch().Enable();
             new ShootingBlockerPatch().Enable();
+            new BotBehaviorPatch().Enable();
 
             LogSource.LogInfo("Revival plugin initialized! Press F5 to use your defibrillator when in critical state.");
         }
