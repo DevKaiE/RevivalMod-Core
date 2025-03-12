@@ -14,7 +14,7 @@ namespace RevivalMod
 {
     // first string below is your plugin's GUID, it MUST be unique to any other mod. Read more about it in BepInEx docs. Be sure to update it if you copy this project.
     [BepInDependency("com.fika.core", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInPlugin("com.kaikinoodles.revivalmod", "RevivalMod", "1.0.0")]
+    [BepInPlugin("com.kaikinoodles.revivalmod", "RevivalMod", "0.0.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static ManualLogSource LogSource;
@@ -34,12 +34,9 @@ namespace RevivalMod
             LogSource.LogInfo("Revival plugin loaded!");
 
             // Enable patches
-            new DamageInfoPatch().Enable();
             new DeathPatch().Enable();
             new RevivalFeatures().Enable();
             new GameStartedPatch().Enable();
-            new ShootingBlockerPatch().Enable();
-            new BotBehaviorPatch().Enable();
 
             LogSource.LogInfo("Revival plugin initialized! Press F5 to use your defibrillator when in critical state.");
         }

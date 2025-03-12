@@ -36,7 +36,7 @@ namespace RevivalMod.Patches
                     return true; // Let original method run
                 }
 
-                if (!__instance.IsYourPlayer) return true;
+                if (!__instance.IsYourPlayer && !__instance.IsAI) return true;
 
                 string playerId = __instance.ProfileId;
 

@@ -113,8 +113,8 @@
     <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
     <Compile Include="Models\ServerDataPack.cs" />
-    <Compile Include="Patches\BotBehaviour.cs" />
-    <Compile Include="Patches\DamageInfoPatch.cs" />
+    <Compile Include="Patches\DEPRECATED\BotBehaviour.cs" />
+    <Compile Include="Patches\DEPRECATED\DamageInfoPatch.cs" />
     <Compile Include="Patches\DeathPatch.cs" />
     <Compile Include="Features\Features.cs" />
     <Compile Include="Fika\FikaInterface.cs" />
@@ -122,7 +122,7 @@
     <Compile Include="Helpers\Packets.cs" />
     <Compile Include="Helpers\Utils.cs" />
     <Compile Include="Patches\GameStartedPatch.cs" />
-    <Compile Include="Patches\ShootingBlockerPatch.cs" />
+    <Compile Include="Patches\DEPRECATED\ShootingBlockerPatch.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

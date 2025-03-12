@@ -31,6 +31,8 @@ namespace RevivalMod.Patches
                 Player player = playerField.GetValue(__instance) as Player;
                 if (player == null) return true;
 
+                if (!player.IsYourPlayer || player.IsAI) return true;
+
                 string playerId = player.ProfileId;
 
                 // Check if player is invulnerable from recent revival
