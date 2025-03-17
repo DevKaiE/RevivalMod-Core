@@ -16,7 +16,7 @@ namespace RevivalMod.Constants
         public const string ITEM_ID = "5c052e6986f7746b207bc3c9"; // Using bandage for testing purposes
 
         // Set to true for testing without requiring an actual defibrillator item
-        public const bool TESTING = true;
+        public const bool TESTING = false;
         public const bool SELF_REVIVAL = true;
     }
 }
