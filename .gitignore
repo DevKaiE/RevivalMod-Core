@@ -1,4 +1,6 @@
 bin/
 obj/
 .vs/
-build/
+RevivalMod-Server/build
+RevivalMod-Server/node_modules
+RevivalMod-Server/types

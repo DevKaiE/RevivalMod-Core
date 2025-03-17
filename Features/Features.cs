@@ -136,7 +136,7 @@ namespace RevivalMod.Features
 
 
                 // Make player invisible to AI - fixed implementation
-                ApplyStealthToPlayer(player);
+                ApplyRevivableStatePlayer(player);
 
                 if (player.IsYourPlayer)
                 {
@@ -250,24 +250,27 @@ namespace RevivalMod.Features
         }
 
         // Method to make player invisible to AI - improved implementation
-        private static void ApplyStealthToPlayer(Player player)
+        private static void ApplyRevivableStatePlayer(Player player)
         {
             try
             {
                 string playerId = player.ProfileId;
 
-                // Skip if already applied
-                if (_originalAwareness.ContainsKey(playerId))
-                    return;
+                //// Skip if already applied
+                //if (_originalAwareness.ContainsKey(playerId))
+                //    return;
 
-                // Store original awareness value
-                _originalAwareness[playerId] = player.Awareness;
+                //// Store original awareness value
+                //_originalAwareness[playerId] = player.Awareness;
 
-                // Set awareness to 0 to make bots not detect the player
-                player.Awareness = 0f;
+                //// Set awareness to 0 to make bots not detect the player
+                //player.Awareness = 0f;
 
                 _originalWeaponAnimationType[playerId] = player.GetWeaponAnimationType(player.HandsController);
-                player.MovementContext.PlayerAnimatorSetWeaponId(EFT.PlayerAnimator.EWeaponAnimationType.EmptyHands);
+                player.HandsController.SetInventoryOpened(false);
+                player.HandsController.IsAiming = false;
+                player.MovementContext.IsInPronePose = true;
+                player.SetEmptyHands(null);
                 player.ActiveHealthController.IsAlive = false;
                 Plugin.LogSource.LogInfo($"Applied improved stealth mode to player {playerId}");
                 Plugin.LogSource.LogDebug($"Stealth Mode Variables, Current Awareness: {player.Awareness}, IsAlive: {player.ActiveHealthController.IsAlive}");
@@ -294,6 +297,7 @@ namespace RevivalMod.Features
 
                 player.IsVisible = true;
                 player.ActiveHealthController.IsAlive = true;
+                player.ActiveHealthController.DoContusion(25f, 0.5f);
 
                 Plugin.LogSource.LogInfo($"Removed stealth mode from player {playerId}");
                 
