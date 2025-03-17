@@ -256,21 +256,19 @@ namespace RevivalMod.Features
             {
                 string playerId = player.ProfileId;
 
-                //// Skip if already applied
-                //if (_originalAwareness.ContainsKey(playerId))
-                //    return;
+                // Skip if already applied
+                if (_originalAwareness.ContainsKey(playerId))
+                    return;
 
-                //// Store original awareness value
-                //_originalAwareness[playerId] = player.Awareness;
+                // Store original awareness value
+                _originalAwareness[playerId] = player.Awareness;
 
-                //// Set awareness to 0 to make bots not detect the player
-                //player.Awareness = 0f;
+                // Set awareness to 0 to make bots not detect the player
+                player.Awareness = 0f;
 
-                _originalWeaponAnimationType[playerId] = player.GetWeaponAnimationType(player.HandsController);
-                player.HandsController.SetInventoryOpened(false);
                 player.HandsController.IsAiming = false;
-                player.MovementContext.IsInPronePose = true;
                 player.SetEmptyHands(null);
+                player.MovementContext.IsInPronePose = true;
                 player.ActiveHealthController.IsAlive = false;
                 Plugin.LogSource.LogInfo($"Applied improved stealth mode to player {playerId}");
                 Plugin.LogSource.LogDebug($"Stealth Mode Variables, Current Awareness: {player.Awareness}, IsAlive: {player.ActiveHealthController.IsAlive}");
@@ -291,9 +289,6 @@ namespace RevivalMod.Features
 
                 player.Awareness = _originalAwareness[playerId];
                 _originalAwareness.Remove(playerId);
-
-                player.MovementContext.PlayerAnimatorSetWeaponId(_originalWeaponAnimationType[playerId]);
-                _originalWeaponAnimationType.Remove(playerId);
 
                 player.IsVisible = true;
                 player.ActiveHealthController.IsAlive = true;
