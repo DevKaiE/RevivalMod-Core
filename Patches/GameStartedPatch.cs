@@ -2,15 +2,14 @@
 using EFT.Communications;
 using Comfort.Common;
 using RevivalMod;
-using RevivalMod.Components;
 using RevivalMod.Features;
-using RevivalMod.Fika;
 using SPT.Reflection.Patching;
 using System;
 using System.Reflection;
 using UnityEngine;
 using EFT.InventoryLogic;
 using System.Linq;
+using RevivalMod.Helpers;
 
 namespace RevivalMod.Patches
 {
@@ -59,30 +58,18 @@ namespace RevivalMod.Patches
 
                 Plugin.LogSource.LogInfo($"Player {playerId} has revival item: {hasItem}");
 
-                // Initialize RMSession with this player
-                try
-                {
-                    RMSession.AddToInRaidPlayersWithItem(playerId, hasItem);
-                    Plugin.LogSource.LogInfo($"Added player {playerId} to RMSession");
-                }
-                catch (Exception ex)
-                {
-                    Plugin.LogSource.LogError($"Error adding player to session: {ex.Message}");
-                }
-
                 // Send packet if Fika is installed
-                if (Plugin.FikaInstalled)
-                {
-                    Plugin.LogSource.LogInfo("Fika is installed, sending packet");
-                    FikaInterface.SendItemInRaidInventoryPacket(playerId, hasItem);
-                }
+
 
                 // Display notification about revival item status
-                NotificationManagerClass.DisplayMessageNotification(
+                if (Settings.TESTING.Value)
+                {
+                    NotificationManagerClass.DisplayMessageNotification(
                     $"Revival System: {(hasItem ? "Revival item found" : "No revival item found")}",
                     ENotificationDurationType.Default,
                     ENotificationIconType.Default,
                     hasItem ? Color.green : Color.yellow);
+                }
             }
             catch (Exception ex)
             {

@@ -9,6 +9,7 @@ using System.Reflection;
 using RevivalMod.Constants;
 using RevivalMod.Features;
 using EFT.InventoryLogic;
+using RevivalMod.Helpers;
 
 namespace RevivalMod.Patches
 {
@@ -24,6 +25,7 @@ namespace RevivalMod.Patches
         {
             try
             {
+
                 // Get the Player field
                 FieldInfo playerField = AccessTools.Field(typeof(ActiveHealthController), "Player");
                 if (playerField == null) return true;
@@ -48,12 +50,26 @@ namespace RevivalMod.Patches
                 var inRaidItems = player.Inventory.GetPlayerItems(EPlayerItems.Equipment);
                 bool hasDefib = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
 
-                Plugin.LogSource.LogInfo($"DEATH PREVENTION: Player has defibrillator: {hasDefib || Constants.Constants.TESTING}");
+                Plugin.LogSource.LogInfo($"DEATH PREVENTION: Player has defibrillator: {hasDefib || Settings.TESTING.Value}");
 
-                if (hasDefib || Constants.Constants.TESTING)
+                if (hasDefib || Settings.TESTING.Value)
                 {
                     Plugin.LogSource.LogInfo("DEATH PREVENTION: Setting player to critical state instead of death");
+                    if (Settings.HARDCORE_MODE.Value)
+                    {
+                        if (Settings.HARDCORE_HEADSHOT_DEFAULT_DEAD.Value && __instance.GetBodyPartHealth(EBodyPart.Head, true).Current < 1) {
+                            Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player headshotted");
+                            return true;
+                        }
 
+
+                        var _randomNumber = new Random().Range(0, 100)/100;
+                        if (Settings.HARDCORE_CHANCE_OF_CRITICAL_STATE.Value < _randomNumber)
+                        {
+                            Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player was unlucky. Random Number was: {_randomNumber}");
+                            return true;
+                        }
+                    }
                     // Set the player in critical state for the revival system
                     RevivalFeatures.SetPlayerCriticalState(player, true);
 
