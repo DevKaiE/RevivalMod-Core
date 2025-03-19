@@ -1,6 +1,8 @@
 ﻿using Comfort.Common;
 using EFT;
 using RevivalMod;
+using System;
+using UnityEngine;
 
 namespace RevivalMod.Fika
 {
@@ -28,6 +30,12 @@ namespace RevivalMod.Fika
         {
             if (!Plugin.FikaInstalled) return;
             FikaWrapper.SendItemInRaidInventoryPacket(playerId, hasItem);
+        }
+
+        public static void SendPlayerPositionPacket(string playerId, DateTime timeOfDeath, Vector3 position)
+        {
+            if(!Plugin.FikaInstalled) return;
+            FikaWrapper.SendPlayerPositionPacket(playerId, timeOfDeath, position);
         }
     }
 }

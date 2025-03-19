@@ -112,6 +112,8 @@
   <ItemGroup>
     <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
+    <Compile Include="Helpers\ConfigurationManagerAttributes.cs" />
+    <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Models\ServerDataPack.cs" />
     <Compile Include="Patches\DEPRECATED\BotBehaviour.cs" />
     <Compile Include="Patches\DEPRECATED\DamageInfoPatch.cs" />

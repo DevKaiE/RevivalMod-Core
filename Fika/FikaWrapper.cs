@@ -7,6 +7,8 @@ using Fika.Core.Networking;
 using LiteNetLib;
 using RevivalMod.Components;
 using RevivalMod.Packets;
+using System;
+using UnityEngine;
 
 namespace RevivalMod.Fika
 {
@@ -48,6 +50,31 @@ namespace RevivalMod.Fika
             }
         }
 
+        public static void SendPlayerPositionPacket(string playerId, DateTime timeOfDeath, Vector3 position)
+        {
+            PlayerPositionPacket packet = new PlayerPositionPacket
+            {
+                playerId = playerId,
+                timeOfDeath = timeOfDeath,
+                position = position
+            };
+
+            if (Singleton<FikaServer>.Instantiated)
+            {
+                Plugin.LogSource.LogInfo("FikaWrapper: Sending as server");
+                Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableSequenced);
+            }
+            else if (Singleton<FikaClient>.Instantiated)
+            {
+                Plugin.LogSource.LogInfo("FikaWrapper: Sending as client");
+                Singleton<FikaClient>.Instance.SendData(ref packet, DeliveryMethod.ReliableSequenced);
+            }
+            else
+            {
+                Plugin.LogSource.LogWarning("FikaWrapper: Neither server nor client is instantiated");
+            }
+        }
+
         private static void OnRevivalItemInPlayerRaidInventoryPacketReceived(RevivalItemInPlayerRaidInventoryPacket packet, NetPeer peer)
         {
             Plugin.LogSource.LogInfo($"FikaWrapper: Received packet for player {packet.playerId}, has item: {packet.hasItem}");
@@ -70,10 +97,16 @@ namespace RevivalMod.Fika
             }
         }
 
+        private static void OnPlayerPositionPacketReceived(PlayerPositionPacket packet, NetPeer peer)
+        {
+            Plugin.LogSource.LogDebug($"Packet received: playerId: {packet.playerId}, position: X {packet.position.x}, Y {packet.position.y},  Z {packet.position.z}");
+        }
+
         public static void OnFikaNetManagerCreated(FikaNetworkManagerCreatedEvent managerCreatedEvent)
         {
             Plugin.LogSource.LogInfo("FikaWrapper: Registering packet handler");
             managerCreatedEvent.Manager.RegisterPacket<RevivalItemInPlayerRaidInventoryPacket, NetPeer>(OnRevivalItemInPlayerRaidInventoryPacketReceived);
+            managerCreatedEvent.Manager.RegisterPacket<PlayerPositionPacket, NetPeer>(OnPlayerPositionPacketReceived);
         }
 
         public static void InitOnPluginEnabled()

@@ -38,5 +38,12 @@ namespace RevivalMod.Helpers
             return player;
         }
 
+        public static Player GetPlayerById(string id)
+        {
+            Player player = Singleton<GameWorld>.Instance.GetEverExistedPlayerByID(id);
+            if (player == null) return null;
+            return player;
+        }
+
     }
 }

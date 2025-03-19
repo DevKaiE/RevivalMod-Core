@@ -13,6 +13,7 @@ using UnityEngine;
 using EFT.Communications;
 using Comfort.Common;
 using RevivalMod.Helpers;
+using RevivalMod.Fika;
 
 namespace RevivalMod.Features
 {
@@ -116,6 +117,7 @@ namespace RevivalMod.Features
                 return;
 
             string playerId = player.ProfileId;
+            Fika.FikaInterface.SendPlayerPositionPacket(playerId, new DateTime(), player.Position);
 
             // Update critical state
             _playerInCriticalState[playerId] = criticalState;
