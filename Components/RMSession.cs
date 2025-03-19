@@ -16,7 +16,7 @@ namespace RevivalMod.Components
         public GamePlayerOwner GamePlayerOwner { get; private set; }
 
         // Dictionary to track players with revival items
-        public Dictionary<string, bool> InRaidPlayersWithItem = new Dictionary<string, bool>();
+        public Dictionary<string, Vector3> CriticalPlayers = new Dictionary<string, Vector3>();
 
         public static RMSession Instance
         {
@@ -68,7 +68,7 @@ namespace RevivalMod.Components
             }
         }
 
-        public static void AddToInRaidPlayersWithItem(string playerId, bool hasItem)
+        public static void AddToCriticalPlayers(string playerId, Vector3 position)
         {
             if (string.IsNullOrEmpty(playerId))
             {
@@ -77,25 +77,26 @@ namespace RevivalMod.Components
             }
 
             // Allow overwrites for updating item status
-            Instance.InRaidPlayersWithItem[playerId] = hasItem;
-            Plugin.LogSource.LogInfo($"Player {playerId} item status set to {hasItem}");
+            Instance.CriticalPlayers[playerId] = position;
+            Plugin.LogSource.LogInfo($"Player {playerId} added to critical players.");
         }
 
-        public static bool GetHasPlayerRevivalItem(string playerId)
+        public static void RemovePlayerFromCriticalPlayers(string playerId)
         {
-            if (string.IsNullOrEmpty(playerId))
-            {
-                Plugin.LogSource.LogError("Tried to check null or empty player ID");
-                return false;
-            }
+            if (string.IsNullOrEmpty(playerId)) return;
+            Instance.CriticalPlayers.Remove(playerId);
+            Plugin.LogSource.LogInfo($"Player {playerId} removed from critical players.");
+        }
 
-            if (!Instance.InRaidPlayersWithItem.ContainsKey(playerId))
-            {
-                Plugin.LogSource.LogWarning($"No record for player {playerId}, defaulting to false");
-                return false;
-            }
+        public static Vector3 GetPosition(string playerId)
+        {
+            if (string.IsNullOrEmpty(playerId)) { return Vector3.zero; }
+            return Instance.CriticalPlayers[playerId];
+        }
 
-            return Instance.InRaidPlayersWithItem[playerId];
+        public static Dictionary<string, Vector3> GetCriticalPlayers()
+        {
+            return Instance.CriticalPlayers;
         }
     }
 }

@@ -110,6 +110,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Components\RevivablePlayerComponent.cs" />
     <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
     <Compile Include="Helpers\ConfigurationManagerAttributes.cs" />

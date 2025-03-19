@@ -14,6 +14,7 @@ using EFT.Communications;
 using Comfort.Common;
 using RevivalMod.Helpers;
 using RevivalMod.Fika;
+using EFT.Interactive;
 
 namespace RevivalMod.Features
 {
@@ -116,8 +117,7 @@ namespace RevivalMod.Features
             if (player == null)
                 return;
 
-            string playerId = player.ProfileId;
-            Fika.FikaInterface.SendPlayerPositionPacket(playerId, new DateTime(), player.Position);
+            string playerId = player.ProfileId;           
 
             // Update critical state
             _playerInCriticalState[playerId] = criticalState;
@@ -187,7 +187,7 @@ namespace RevivalMod.Features
                 player.ActiveHealthController.DoStun(Settings.REVIVAL_DURATION.Value / 2, 1f);
 
                 // Severe movement restrictions - extremely slow movement
-                player.Physical.WalkSpeedLimit = _originalMovementSpeed[playerId] * 0.02f; // Only 5% of normal speed
+                player.Physical.WalkSpeedLimit = 0f; // No movement
 
                 // Restrict player to crouch-only
                 if (player.MovementContext != null)
@@ -258,6 +258,8 @@ namespace RevivalMod.Features
                 player.SetEmptyHands(null);
                 player.ResetLookDirection();
                 player.ActiveHealthController.IsAlive = false;
+                player.gameObject.
+                FikaInterface.SendPlayerPositionPacket(playerId, new DateTime(), player.Position);
                 Plugin.LogSource.LogDebug($"Applied improved stealth mode to player {playerId}");
                 Plugin.LogSource.LogDebug($"Stealth Mode Variables, Current Awareness: {player.Awareness}, IsAlive: {player.ActiveHealthController.IsAlive}");
             }
@@ -372,6 +374,8 @@ namespace RevivalMod.Features
                 {
                     ConsumeDefibItem(player);
                 }
+
+                FikaInterface.SendRemovePlayerFromCriticalPlayersListPacket(playerId);
 
                 // Apply revival effects - now with limited healing
                 ApplyRevivalEffects(player);

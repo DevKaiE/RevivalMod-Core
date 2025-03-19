@@ -23,6 +23,18 @@ namespace RevivalMod.Packets
         }
     }
 
+    public struct RemovePlayerFromCriticalPlayersListPacket : INetSerializable
+    {
+        public string playerId;
+        public void Deserialize(NetDataReader reader)
+        {
+            playerId = reader.GetString();
+        }
+        public void Serialize(NetDataWriter writer) {
+            writer.Put(playerId); 
+        }
+    }
+
     public struct PlayerPositionPacket : INetSerializable
     {
         public string playerId;
@@ -31,15 +43,44 @@ namespace RevivalMod.Packets
 
         public void Deserialize(NetDataReader reader)
         {
+            // Make sure we read in the same order as we write in Serialize
             playerId = reader.GetString();
-            timeOfDeath = DateTime.FromBinary(reader.GetLong());
-            position = new Vector3(reader.GetFloat(), reader.GetFloat(), reader.GetFloat());
+
+            // Properly handle DateTime serialization
+            try
+            {
+                timeOfDeath = DateTime.FromBinary(reader.GetLong());
+            }
+            catch (Exception)
+            {
+                // Fallback if DateTime deserialization fails
+                timeOfDeath = DateTime.UtcNow;
+            }
+
+            // Deserialize Vector3 with proper error handling
+            float x = reader.GetFloat();
+            float y = reader.GetFloat();
+            float z = reader.GetFloat();
+            position = new Vector3(x, y, z);
         }
 
         public void Serialize(NetDataWriter writer)
         {
-            writer.Put(playerId);
-            writer.Put(timeOfDeath.ToBinary());
+            // Make sure we write in the same order as we read in Deserialize
+            writer.Put(playerId ?? string.Empty); // Avoid null reference
+
+            // Properly handle DateTime serialization
+            try
+            {
+                writer.Put(timeOfDeath.ToBinary());
+            }
+            catch (Exception)
+            {
+                // Fallback if DateTime serialization fails
+                writer.Put(DateTime.UtcNow.ToBinary());
+            }
+
+            // Serialize Vector3
             writer.Put(position.x);
             writer.Put(position.y);
             writer.Put(position.z);

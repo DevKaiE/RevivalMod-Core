@@ -24,32 +24,6 @@ namespace RevivalMod.Fika
             return FikaBackendUtils.GroupId;
         }
 
-        public static void SendItemInRaidInventoryPacket(string playerId, bool hasItem)
-        {
-            Plugin.LogSource.LogInfo($"FikaWrapper: Sending packet for player {playerId}, has item: {hasItem}");
-
-            RevivalItemInPlayerRaidInventoryPacket packet = new RevivalItemInPlayerRaidInventoryPacket
-            {
-                playerId = playerId,
-                hasItem = hasItem
-            };
-
-            if (Singleton<FikaServer>.Instantiated)
-            {
-                Plugin.LogSource.LogInfo("FikaWrapper: Sending as server");
-                Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered);
-            }
-            else if (Singleton<FikaClient>.Instantiated)
-            {
-                Plugin.LogSource.LogInfo("FikaWrapper: Sending as client");
-                Singleton<FikaClient>.Instance.SendData(ref packet, DeliveryMethod.ReliableOrdered);
-            }
-            else
-            {
-                Plugin.LogSource.LogWarning("FikaWrapper: Neither server nor client is instantiated");
-            }
-        }
-
         public static void SendPlayerPositionPacket(string playerId, DateTime timeOfDeath, Vector3 position)
         {
             PlayerPositionPacket packet = new PlayerPositionPacket
@@ -62,7 +36,43 @@ namespace RevivalMod.Fika
             if (Singleton<FikaServer>.Instantiated)
             {
                 Plugin.LogSource.LogInfo("FikaWrapper: Sending as server");
-                Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableSequenced);
+                try
+                {
+                    Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.LogSource.LogError(ex.Message);
+                }
+            }
+            else if (Singleton<FikaClient>.Instantiated)
+            {
+                Plugin.LogSource.LogInfo("FikaWrapper: Sending as client");
+                Singleton<FikaClient>.Instance.SendData(ref packet, DeliveryMethod.ReliableSequenced);
+            }
+            else
+            {
+                Plugin.LogSource.LogWarning("FikaWrapper: Neither server nor client is instantiated");
+            }
+        }
+        public static void SendRemovePlayerFromCriticalPlayersListPacket(string playerId)
+        {
+            RemovePlayerFromCriticalPlayersListPacket packet = new RemovePlayerFromCriticalPlayersListPacket()
+            {
+                playerId = playerId
+            };
+
+            if (Singleton<FikaServer>.Instantiated)
+            {
+                Plugin.LogSource.LogInfo("FikaWrapper: Sending as server");
+                try
+                {
+                    Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.LogSource.LogError(ex.Message);
+                }
             }
             else if (Singleton<FikaClient>.Instantiated)
             {
@@ -75,38 +85,21 @@ namespace RevivalMod.Fika
             }
         }
 
-        private static void OnRevivalItemInPlayerRaidInventoryPacketReceived(RevivalItemInPlayerRaidInventoryPacket packet, NetPeer peer)
-        {
-            Plugin.LogSource.LogInfo($"FikaWrapper: Received packet for player {packet.playerId}, has item: {packet.hasItem}");
-
-            try
-            {
-                RMSession.AddToInRaidPlayersWithItem(packet.playerId, packet.hasItem);
-                Plugin.LogSource.LogInfo($"FikaWrapper: Added player {packet.playerId} to session");
-            }
-            catch (System.Exception ex)
-            {
-                Plugin.LogSource.LogError($"FikaWrapper: Error processing packet: {ex.Message}");
-            }
-
-            // Only forward if we're the server
-            if (Singleton<FikaServer>.Instantiated)
-            {
-                Plugin.LogSource.LogInfo("FikaWrapper: Forwarding packet as server");
-                Singleton<FikaServer>.Instance.SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered);
-            }
-        }
-
         private static void OnPlayerPositionPacketReceived(PlayerPositionPacket packet, NetPeer peer)
         {
             Plugin.LogSource.LogDebug($"Packet received: playerId: {packet.playerId}, position: X {packet.position.x}, Y {packet.position.y},  Z {packet.position.z}");
+            RMSession.AddToCriticalPlayers(packet.playerId, packet.position);
         }
-
+        private static void OnRemovePlayerFromCriticalPlayersListPacketReceived(RemovePlayerFromCriticalPlayersListPacket packet,  NetPeer peer)
+        {
+            Plugin.LogSource.LogDebug($"RemovePlayerFromCriticalPlayersListPacket received: {packet.playerId}");
+            RMSession.RemovePlayerFromCriticalPlayers(packet.playerId);
+        }
         public static void OnFikaNetManagerCreated(FikaNetworkManagerCreatedEvent managerCreatedEvent)
         {
             Plugin.LogSource.LogInfo("FikaWrapper: Registering packet handler");
-            managerCreatedEvent.Manager.RegisterPacket<RevivalItemInPlayerRaidInventoryPacket, NetPeer>(OnRevivalItemInPlayerRaidInventoryPacketReceived);
             managerCreatedEvent.Manager.RegisterPacket<PlayerPositionPacket, NetPeer>(OnPlayerPositionPacketReceived);
+            managerCreatedEvent.Manager.RegisterPacket<RemovePlayerFromCriticalPlayersListPacket, NetPeer>(OnRemovePlayerFromCriticalPlayersListPacketReceived);
         }
 
         public static void InitOnPluginEnabled()

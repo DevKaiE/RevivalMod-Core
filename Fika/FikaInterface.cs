@@ -26,16 +26,18 @@ namespace RevivalMod.Fika
             FikaWrapper.InitOnPluginEnabled();
         }
 
-        public static void SendItemInRaidInventoryPacket(string playerId, bool hasItem)
-        {
-            if (!Plugin.FikaInstalled) return;
-            FikaWrapper.SendItemInRaidInventoryPacket(playerId, hasItem);
-        }
-
         public static void SendPlayerPositionPacket(string playerId, DateTime timeOfDeath, Vector3 position)
         {
             if(!Plugin.FikaInstalled) return;
             FikaWrapper.SendPlayerPositionPacket(playerId, timeOfDeath, position);
         }
+
+        public static void SendRemovePlayerFromCriticalPlayersListPacket(string playerId)
+        {
+            if (!Plugin.FikaInstalled) return;
+            FikaWrapper.SendRemovePlayerFromCriticalPlayersListPacket(playerId);
+        }
+
+
     }
 }
