@@ -5,21 +5,37 @@ using UnityEngine;
 
 namespace RevivalMod.Packets
 {
-    public struct RevivalItemInPlayerRaidInventoryPacket : INetSerializable
+
+    public struct ReviveMePacket : INetSerializable
     {
-        public bool hasItem;
-        public string playerId;
+        public string reviveeId;
+        public string reviverId;
 
         public void Deserialize(NetDataReader reader)
         {
-            hasItem = reader.GetBool();
-            playerId = reader.GetString();
+            reviveeId = reader.GetString();
+            reviverId = reader.GetString();
         }
 
         public void Serialize(NetDataWriter writer)
         {
-            writer.Put(hasItem);
-            writer.Put(playerId);
+            writer.Put(reviveeId);
+            writer.Put(reviverId);
+        }
+    }
+
+    public struct RevivedPacket : INetSerializable
+    {
+        public string reviverId;
+
+        public void Deserialize(NetDataReader reader)
+        {
+            reviverId = reader.GetString();
+        }
+
+        public void Serialize(NetDataWriter writer)
+        {
+            writer.Put(reviverId);
         }
     }
 

@@ -38,6 +38,7 @@
     <Reference Include="Fika.Core">
       <HintPath>..\Fika.Core.dll</HintPath>
     </Reference>
+    <Reference Include="ItemComponent.Types, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
     <Reference Include="PhysicsModule">
       <HintPath>..\..\EscapeFromTarkov_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
@@ -110,7 +111,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Components\RevivablePlayerComponent.cs" />
     <Compile Include="Components\RMSession.cs" />
     <Compile Include="Constants\Constants.cs" />
     <Compile Include="Helpers\ConfigurationManagerAttributes.cs" />

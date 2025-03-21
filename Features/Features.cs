@@ -15,6 +15,10 @@ using Comfort.Common;
 using RevivalMod.Helpers;
 using RevivalMod.Fika;
 using EFT.Interactive;
+using RevivalMod.Components;
+using Fika.Core.Coop.Utils;
+using Fika.Core.Networking;
+using EFT.UI;
 
 namespace RevivalMod.Features
 {
@@ -27,6 +31,8 @@ namespace RevivalMod.Features
         private static readonly float MOVEMENT_SPEED_MULTIPLIER = 0.1f; // 40% normal speed during invulnerability
         private static readonly bool FORCE_CROUCH_DURING_INVULNERABILITY = false; // Force player to crouch during invulnerability
         private static readonly bool DISABLE_SHOOTING_DURING_INVULNERABILITY = false; // Disable shooting during invulnerability
+        private static float _notificationTimer = 0f;
+        private const float NOTIFICATION_INTERVAL = 15f;
 
         // States
         private static Dictionary<string, long> _lastRevivalTimesByPlayer = new Dictionary<string, long>();
@@ -37,6 +43,7 @@ namespace RevivalMod.Features
         private static Dictionary<string, float> _originalMovementSpeed = new Dictionary<string, float>(); // Store original movement speed
         private static Dictionary<string, EFT.PlayerAnimator.EWeaponAnimationType> _originalWeaponAnimationType = new Dictionary<string, PlayerAnimator.EWeaponAnimationType>();
         private static Player PlayerClient { get; set; } = null;
+        private static Dictionary<string, bool> _revivablePlayers = new Dictionary<string, bool>();
 
         protected override MethodBase GetTargetMethod()
         {
@@ -92,14 +99,49 @@ namespace RevivalMod.Features
                     }
                 }
 
-                // Check for manual revival key press when in critical state
-                if (_playerInCriticalState.TryGetValue(playerId, out bool inCritical) && inCritical && Constants.Constants.SELF_REVIVAL)
+                if (CheckRevivalItemInRaidInventory().Value)
                 {
-                    if (Input.GetKeyDown(Settings.REVIVAL_KEY.Value))
+
+                    Vector3 currentPos = __instance.Position;
+                    foreach (KeyValuePair<string, Vector3> critPlayer in RMSession.GetCriticalPlayers())
                     {
-                        TryPerformManualRevival(__instance);
+                        //// Option 1: Using Vector3.Distance (simple and clear)
+                        //if (Vector3.Distance(currentPos, critPlayer.Value) <= 2f)
+                        //{
+                        //    // The critPlayer is within 2 meters of the player.
+                        //}
+
+                        //Option 2: Using squared magnitude for performance(avoids the square root calculation)
+                        if ((currentPos - critPlayer.Value).sqrMagnitude <= 4f && (!_revivablePlayers.ContainsKey(critPlayer.Key) || !_revivablePlayers[critPlayer.Key]))
+                        {
+                            _notificationTimer -= Time.deltaTime;
+                            if (_notificationTimer <= 0)
+                            {
+                                _notificationTimer = NOTIFICATION_INTERVAL;
+                                NotificationManagerClass.DisplayMessageNotification(
+                                    $"Press {Settings.TEAM_REVIVAL_KEY.Value.ToString()} to use your defibrillator to revive your teammate!",
+                                    ENotificationDurationType.Long,
+                                    ENotificationIconType.Friend,
+                                    Color.green);
+                                Plugin.LogSource.LogDebug($"Player with id {playerId} is within 2m of critplayer with id {critPlayer}");
+                            }
+                            if (Input.GetKeyDown(Settings.TEAM_REVIVAL_KEY.Value))
+                            {
+                                bool revivalSucceeded = PerfomTeamMateRevival(critPlayer.Key, __instance);                                
+                            }
+                        }
+                    }
+
+                    // Check for manual revival key press when in critical state
+                    if (_playerInCriticalState.TryGetValue(playerId, out bool inCritical) && inCritical && Constants.Constants.SELF_REVIVAL)
+                    {
+                        if (Input.GetKeyDown(Settings.SELF_REVIVAL_KEY.Value))
+                        {
+                            TryPerformManualRevival(__instance);
+                        }
                     }
                 }
+                
             }
             catch (Exception ex)
             {
@@ -142,7 +184,7 @@ namespace RevivalMod.Features
                     {
                         // Show revival message
                         NotificationManagerClass.DisplayMessageNotification(
-                            $"CRITICAL CONDITION! Press {Settings.REVIVAL_KEY.Value.ToString()} to use your defibrillator!",
+                            $"CRITICAL CONDITION! Press {Settings.SELF_REVIVAL_KEY.Value.ToString()} to use your defibrillator!",
                             ENotificationDurationType.Long,
                             ENotificationIconType.Default,
                             Color.red);
@@ -258,7 +300,6 @@ namespace RevivalMod.Features
                 player.SetEmptyHands(null);
                 player.ResetLookDirection();
                 player.ActiveHealthController.IsAlive = false;
-                player.gameObject.
                 FikaInterface.SendPlayerPositionPacket(playerId, new DateTime(), player.Position);
                 Plugin.LogSource.LogDebug($"Applied improved stealth mode to player {playerId}");
                 Plugin.LogSource.LogDebug($"Stealth Mode Variables, Current Awareness: {player.Awareness}, IsAlive: {player.ActiveHealthController.IsAlive}");
@@ -295,7 +336,6 @@ namespace RevivalMod.Features
 
         public static KeyValuePair<string, bool> CheckRevivalItemInRaidInventory()
         {
-            Plugin.LogSource.LogDebug("Checking for revival item in inventory");
 
             try
             {
@@ -304,18 +344,15 @@ namespace RevivalMod.Features
                     if (Singleton<GameWorld>.Instantiated)
                     {
                         PlayerClient = Singleton<GameWorld>.Instance.MainPlayer;
-                        Plugin.LogSource.LogDebug($"Initialized PlayerClient: {PlayerClient != null}");
                     }
                     else
                     {
-                        Plugin.LogSource.LogWarning("GameWorld not instantiated yet");
                         return new KeyValuePair<string, bool>(string.Empty, false);
                     }
                 }
 
                 if (PlayerClient == null)
                 {
-                    Plugin.LogSource.LogError("PlayerClient is still null after initialization attempt");
                     return new KeyValuePair<string, bool>(string.Empty, false);
                 }
 
@@ -323,12 +360,10 @@ namespace RevivalMod.Features
                 var inRaidItems = PlayerClient.Inventory.GetPlayerItems(EPlayerItems.Equipment);
                 bool hasItem = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
 
-                Plugin.LogSource.LogDebug($"Player {playerId} has revival item: {hasItem}");
                 return new KeyValuePair<string, bool>(playerId, hasItem);
             }
             catch (Exception ex)
             {
-                Plugin.LogSource.LogError($"Error checking revival item: {ex.Message}");
                 return new KeyValuePair<string, bool>(string.Empty, false);
             }
         }
@@ -415,27 +450,82 @@ namespace RevivalMod.Features
             }
         }
 
+        public static bool PerfomTeamMateRevival(string playerId, Player reviver)
+        {
+            try
+            {
+                ConsumeDefibItem(reviver);
+                RMSession.RemovePlayerFromCriticalPlayers(playerId);
+                    
+                FikaInterface.SendRemovePlayerFromCriticalPlayersListPacket(playerId);
+                FikaInterface.SendReviveMePacket(playerId, reviver.ProfileId);
+                      
+                return true;
+    
+            }
+            catch (Exception e)
+            {
+                Plugin.LogSource.LogError(e);
+                return false;
+            }
+        }
+
+        public static bool TryPerformRevivalByTeamMate(string playerId)
+        {
+           
+            if (playerId != Singleton<GameWorld>.Instance.MainPlayer.ProfileId) return false;
+            Player player = Singleton<GameWorld>.Instance.MainPlayer;
+
+            try {
+            // Apply revival effects - now with limited healing
+            ApplyRevivalEffects(player);
+
+            // Apply invulnerability
+            StartInvulnerability(player);
+
+            player.Say(EPhraseTrigger.OnMutter, false, 2f, ETagStatus.Combat, 100, true);
+
+            // Reset critical state
+            _playerInCriticalState[playerId] = false;
+
+
+
+            // Set last revival time
+            _lastRevivalTimesByPlayer[playerId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            // Show successful revival notification
+            NotificationManagerClass.DisplayMessageNotification(
+                "Defibrillator used successfully! You are temporarily invulnerable but limited in movement.",
+                ENotificationDurationType.Long,
+                ENotificationIconType.Default,
+                Color.green);
+
+            Plugin.LogSource.LogInfo($"Manual revival performed for player {playerId}");
+            return true;
+            }
+            catch(Exception e) {
+                Plugin.LogSource.LogError(e);
+               return false;
+            }
+        }
+
+        // Fix the type parameter issue by ensuring MedKitComponent implements IItemComponent
         private static void ConsumeDefibItem(Player player)
         {
             try
             {
                 var inRaidItems = player.Inventory.GetPlayerItems(EPlayerItems.Equipment);
                 Item defibItem = inRaidItems.FirstOrDefault(item => item.TemplateId == Constants.Constants.ITEM_ID);
+                Plugin.LogSource.LogDebug($"Found defib item: {defibItem?.TemplateId}");
+                defibItem.GetItemComponent<MedKitComponent>().HpResource = 0f;
+                ItemAddress itemAdress = defibItem.GetItemComponent<MedKitComponent>().Item.CurrentAddress;
+                itemAdress.RemoveWithoutRestrictions(defibItem);
 
                 if (defibItem != null)
                 {
-                    // Use reflection to access the necessary methods to destroy the item
-                    MethodInfo moveMethod = AccessTools.Method(typeof(InventoryController), "ThrowItem");
-                    if (moveMethod != null)
-                    {
-                        // This will effectively discard the item
-                        moveMethod.Invoke(player.InventoryController, new object[] { defibItem, false, null });
-                        Plugin.LogSource.LogInfo($"Consumed defibrillator item {defibItem.Id}");
-                    }
-                    else
-                    {
-                        Plugin.LogSource.LogError("Could not find ThrowItem method");
-                    }
+
+                    ItemUiContext context = ItemUiContext.Instance;
+                    context.UseAll(defibItem);
                 }
             }
             catch (Exception ex)

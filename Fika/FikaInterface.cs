@@ -38,6 +38,10 @@ namespace RevivalMod.Fika
             FikaWrapper.SendRemovePlayerFromCriticalPlayersListPacket(playerId);
         }
 
-
+        public static void SendReviveMePacket(string reviveeId, string reviverId)
+        {
+            if (!Plugin.FikaInstalled) return;
+            FikaWrapper.SendReviveMePacket(reviveeId, reviverId);
+        }
     }
 }

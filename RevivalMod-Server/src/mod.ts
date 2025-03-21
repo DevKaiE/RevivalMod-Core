@@ -163,8 +163,8 @@ class RevivalMod implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
             
             // Adjust base price of defibrillator for flea market
             if (items[this.defibId]) {
-                items[this.defibId]._props.CreditsPrice = 25000;
-                this.logger.info(`[${this.mod}] Adjusted base price of defibrillator to 25,000 ₽`);
+                items[this.defibId]._props.CreditsPrice = config.RevivalItem.Trading.AmountRoubles || 150000; // 25,000 rubles
+                this.logger.info(`[${this.mod}] Adjusted base price of defibrillator to 150000 ₽`);
             }
         } catch (error) {
             this.logger.error(`[${this.mod}] Error adjusting defibrillator price: ${error.message}`);
@@ -174,30 +174,83 @@ class RevivalMod implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
     private enhanceDefibrillatorProperties(): void {
         try {
             const tables = this.databaseServer.getTables();
-            const items = tables.templates.items;
+            this.logger.info(`[${this.mod}] Got database tables`);
             
-            // Get the defibrillator item
-            if (items[this.defibId]) {
-                // Update description to mention the revival mod
-                items[this.defibId]._props.Description = 
-                    "A portable defibrillator used to revive yourself or others from critical condition. " + 
-                    "When in critical state, press F5 to use and get a second chance at life.";
-                
-                // Make it more compact (2x1 instead of 2x2)
-                if (items[this.defibId]._props.Width && items[this.defibId]._props.Height) {
-                    items[this.defibId]._props.Width = 2;  
-                    items[this.defibId]._props.Height = 1;
-                }
-                
-                // Add a special property to make the defibrillator clearly visible
-                if (!items[this.defibId]._props.BackgroundColor) {
-                    items[this.defibId]._props.BackgroundColor = "red";
-                }
-                
-                this.logger.info(`[${this.mod}] Enhanced defibrillator properties for better use with RevivalMod`);
+            if (!tables.templates || !tables.templates.items) {
+                this.logger.error(`[${this.mod}] Templates or items is undefined`);
+                return;
             }
+            
+            const items = tables.templates.items;
+            this.logger.info(`[${this.mod}] Looking for item with ID: ${this.defibId}`);
+            
+            // Check if item exists
+            if (!items[this.defibId]) {
+                this.logger.error(`[${this.mod}] Item with ID ${this.defibId} not found in database`);
+                return;
+            }
+            
+            this.logger.info(`[${this.mod}] Found item: ${items[this.defibId]._name}`);
+            
+            // Log parent class before modification
+            this.logger.info(`[${this.mod}] Current parent: ${items[this.defibId]._parent}`);
+            
+            // Update description to mention the revival mod
+            items[this.defibId]._props.Description = 
+                "A portable defibrillator used to revive yourself or others from critical condition. " + 
+                "When in critical state, press F5 to use and get a second chance at life.";
+            
+            // Make it more compact (2x1 instead of 2x2)
+            if (items[this.defibId]._props.Width && items[this.defibId]._props.Height) {
+                items[this.defibId]._props.Width = 2;  
+                items[this.defibId]._props.Height = 1;
+            }
+            
+            // Add a special property to make the defibrillator clearly visible
+            items[this.defibId]._props.BackgroundColor = "red";
+            
+            // Make it a proper usable medical item
+            items[this.defibId]._props.MaxHpResource = 1;
+            items[this.defibId]._props.StimulatorBuffs = "";
+            items[this.defibId]._props.medUseTime = 3;
+            
+            // Add required properties for medical items - use empty object
+            items[this.defibId]._props.effects_health = items[this.defibId]._props.effects_health || {};
+            
+            // Set effects_damage for healing properties
+            items[this.defibId]._props.effects_damage = items[this.defibId]._props.effects_damage || {
+                Pain: {
+                    delay: 0,
+                    duration: 0,
+                    fadeOut: 0
+                }
+            };
+            
+            // Important: Update parent to medical items if it isn't already
+            // The medical item parent ID
+            if (items[this.defibId]._parent === "57864c8c245977548867e7f1") {
+                // If it's a "barter item" (based on the ID you showed), change it to medical
+                items[this.defibId]._parent = "5448f39d4bdc2d0a728b4568"; // Medical items parent
+                this.logger.info(`[${this.mod}] Changed parent to medical item category`);
+            }
+            
+            // Make it a one-time use item
+            items[this.defibId]._props.MaximumNumberOfUsage = 1;
+            items[this.defibId]._props.CanSellOnRagfair = true;
+            items[this.defibId]._props.Rarity = "Rare";
+            
+            // Add resource property needed for consumption
+            items[this.defibId]._props.Resource = 1;
+            
+            this.logger.info(`[${this.mod}] Enhanced defibrillator properties: 
+              - MaxHpResource: ${items[this.defibId]._props.MaxHpResource}
+              - Resource: ${items[this.defibId]._props.Resource}
+              - Parent: ${items[this.defibId]._parent}`);
         } catch (error) {
             this.logger.error(`[${this.mod}] Error enhancing defibrillator properties: ${error.message}`);
+            if (error.stack) {
+                this.logger.error(`[${this.mod}] Stack trace: ${error.stack}`);
+            }
         }
     }
 

@@ -6,7 +6,8 @@ namespace RevivalMod.Helpers
     internal class Settings
     {
         public static ConfigEntry<float> REVIVAL_DURATION;
-        public static ConfigEntry<KeyCode> REVIVAL_KEY;
+        public static ConfigEntry<KeyCode> SELF_REVIVAL_KEY;
+        public static ConfigEntry<KeyCode> TEAM_REVIVAL_KEY;
         public static ConfigEntry<float> REVIVAL_COOLDOWN;
         public static ConfigEntry<bool> RESTORE_DESTROYED_BODY_PARTS;
 
@@ -43,11 +44,16 @@ namespace RevivalMod.Helpers
                 4f,
                "Adapt the duration of the amount of time it takes to revive."
             );
-            REVIVAL_KEY = config.Bind(
+            SELF_REVIVAL_KEY = config.Bind(
                 "General",
-                "Revival Key",
+                "Self Revival Key",
                 KeyCode.F5
             );
+            TEAM_REVIVAL_KEY = config.Bind(
+                "General",
+                "Team Revival Key",
+                KeyCode.F6
+                );
             REVIVAL_COOLDOWN = config.Bind(
                 "General",
                 "Revival Cooldown",
