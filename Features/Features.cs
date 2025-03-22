@@ -812,9 +812,12 @@ namespace RevivalMod.Features
             {
                 string playerId = player.ProfileId;
 
+                // Add to override list first (before any other operations)
+                KillOverridePlayers[playerId] = true;
+
+                // Clean up all state tracking for this player
                 _playerIsInvulnerable[playerId] = false;
-                _playerInvulnerabilityTimers[playerId] = 0f;
-                // Reset critical state
+                _playerInvulnerabilityTimers.Remove(playerId);
                 _playerInCriticalState[playerId] = false;
                 _playerCriticalStateTimers.Remove(playerId);
 
@@ -828,11 +831,15 @@ namespace RevivalMod.Features
                     ENotificationDurationType.Long,
                     ENotificationIconType.Alert,
                     Color.red);
-                KillOverridePlayers.Add(playerId, true);
+
+                // Get the damage type before killing
                 EDamageType damageType = _playerInCriticalStateDamageInfo[playerId];
-                // Actually kill the player using the proper method
-                
+
+                // Use reflection to directly call the original Kill method, bypassing Harmony patches
+                // This is a more direct approach to avoid our own patch
+                player.ActiveHealthController.IsAlive = true;
                 player.ActiveHealthController.Kill(damageType);
+
                 Plugin.LogSource.LogInfo($"Player {playerId} has died after critical state");
             }
             catch (Exception ex)
