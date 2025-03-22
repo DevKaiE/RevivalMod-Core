@@ -8,8 +8,11 @@ namespace RevivalMod.Helpers
         public static ConfigEntry<float> REVIVAL_DURATION;
         public static ConfigEntry<KeyCode> SELF_REVIVAL_KEY;
         public static ConfigEntry<KeyCode> TEAM_REVIVAL_KEY;
+        public static ConfigEntry<KeyCode> GIVE_UP_KEY;
         public static ConfigEntry<float> REVIVAL_COOLDOWN;
         public static ConfigEntry<bool> RESTORE_DESTROYED_BODY_PARTS;
+        public static ConfigEntry<float> TIME_TO_REVIVE;
+        public static ConfigEntry<bool> SELF_REVIVAL_ENABLED;
 
         public static ConfigEntry<bool> HARDCORE_MODE; 
         public static ConfigEntry<bool> HARDCORE_HEADSHOT_DEFAULT_DEAD;
@@ -44,6 +47,12 @@ namespace RevivalMod.Helpers
                 4f,
                "Adapt the duration of the amount of time it takes to revive."
             );
+            SELF_REVIVAL_ENABLED = config.Bind(
+                "General",
+                "Self Revival Enabled",
+                true,
+               "Enable self revival"
+            );
             SELF_REVIVAL_KEY = config.Bind(
                 "General",
                 "Self Revival Key",
@@ -54,6 +63,11 @@ namespace RevivalMod.Helpers
                 "Team Revival Key",
                 KeyCode.F6
                 );
+            GIVE_UP_KEY = config.Bind(
+                "General",
+                "Give Up Key",
+                KeyCode.Backspace
+            );
             REVIVAL_COOLDOWN = config.Bind(
                 "General",
                 "Revival Cooldown",
@@ -64,6 +78,12 @@ namespace RevivalMod.Helpers
                 "Restore destroyed body parts after revive",
                 false,
                "Does not work if Hardcore Mode is enabled"
+            );
+            TIME_TO_REVIVE = config.Bind(
+                "General",
+                "Time to revive",
+                180f,
+               "How much time you have to get revived"
             );
 
             TESTING = config.Bind(

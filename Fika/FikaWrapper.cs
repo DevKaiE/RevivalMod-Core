@@ -170,14 +170,12 @@ namespace RevivalMod.Fika
 
         private static void OnRevivedPacketReceived(RevivedPacket packet, NetPeer peer)
         { 
-            if (Singleton<GameWorld>.Instance.MainPlayer.ProfileId == packet.reviverId)
-            {
                 NotificationManagerClass.DisplayMessageNotification(
                     $"Succesfully revived your teammate!",
                     ENotificationDurationType.Long,
                     ENotificationIconType.Friend,
                     Color.green);
-            }
+            
         }
 
         public static void OnFikaNetManagerCreated(FikaNetworkManagerCreatedEvent managerCreatedEvent)

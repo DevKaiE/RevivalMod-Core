@@ -10,6 +10,8 @@ using RevivalMod.Constants;
 using RevivalMod.Features;
 using EFT.InventoryLogic;
 using RevivalMod.Helpers;
+using UnityEngine;
+using EFT.Communications;
 
 namespace RevivalMod.Patches
 {
@@ -25,7 +27,6 @@ namespace RevivalMod.Patches
         {
             try
             {
-
                 // Get the Player field
                 FieldInfo playerField = AccessTools.Field(typeof(ActiveHealthController), "Player");
                 if (playerField == null) return true;
@@ -33,9 +34,11 @@ namespace RevivalMod.Patches
                 Player player = playerField.GetValue(__instance) as Player;
                 if (player == null) return true;
 
-                if (!player.IsYourPlayer || player.IsAI) return true;
+                // Only handle player deaths, not AI
+                if (player.IsAI) return true;
 
                 string playerId = player.ProfileId;
+                if (RevivalFeatures.KillOverridePlayers.ContainsKey(playerId) && RevivalFeatures.KillOverridePlayers[playerId] == true) { return true; }
 
                 // Check if player is invulnerable from recent revival
                 if (RevivalFeatures.IsPlayerInvulnerable(playerId))
@@ -46,36 +49,45 @@ namespace RevivalMod.Patches
 
                 Plugin.LogSource.LogInfo($"DEATH PREVENTION: Player {player.ProfileId} about to die from {damageType}");
 
-                // Check if the player has the revival item
-                var inRaidItems = player.Inventory.GetPlayerItems(EPlayerItems.Equipment);
-                bool hasDefib = inRaidItems.Any(item => item.TemplateId == Constants.Constants.ITEM_ID);
-
-                Plugin.LogSource.LogInfo($"DEATH PREVENTION: Player has defibrillator: {hasDefib || Settings.TESTING.Value}");
-
-                if (hasDefib || Settings.TESTING.Value)
+                // Check for hardcore mode conditions first
+                if (Settings.HARDCORE_MODE.Value)
                 {
-                    Plugin.LogSource.LogInfo("DEATH PREVENTION: Setting player to critical state instead of death");
-                    if (Settings.HARDCORE_MODE.Value)
+                    // Check for headshot instant death
+                    if (Settings.HARDCORE_HEADSHOT_DEFAULT_DEAD.Value &&
+                        __instance.GetBodyPartHealth(EBodyPart.Head, true).Current < 1)
                     {
-                        if (Settings.HARDCORE_HEADSHOT_DEFAULT_DEAD.Value && __instance.GetBodyPartHealth(EBodyPart.Head, true).Current < 1) {
-                            Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player headshotted");
-                            return true;
-                        }
+                        Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player headshotted");
 
+                        NotificationManagerClass.DisplayMessageNotification(
+                            "Headshot - killed instantly",
+                            ENotificationDurationType.Default,
+                            ENotificationIconType.Alert,
+                            Color.red);
 
-                        var _randomNumber = new Random().Range(0, 100)/100;
-                        if (Settings.HARDCORE_CHANCE_OF_CRITICAL_STATE.Value < _randomNumber)
-                        {
-                            Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player was unlucky. Random Number was: {_randomNumber}");
-                            return true;
-                        }
+                        return true; // Allow death to happen normally
                     }
-                    // Set the player in critical state for the revival system
-                    RevivalFeatures.SetPlayerCriticalState(player, true);
 
-                    // Block the kill completely
-                    return false;
+                    // Handle random chance of critical state
+                    float randomNumber = UnityEngine.Random.Range(0f, 100f) / 100f;
+                    if (Settings.HARDCORE_CHANCE_OF_CRITICAL_STATE.Value < randomNumber)
+                    {
+                        Plugin.LogSource.LogInfo($"DEATH NOT PREVENTED: Player was unlucky. Random Number was: {randomNumber}");
+
+                        NotificationManagerClass.DisplayMessageNotification(
+                            "Critical injury - killed instantly",
+                            ENotificationDurationType.Default,
+                            ENotificationIconType.Alert,
+                            Color.red);
+
+                        return true; // Allow death to happen normally
+                    }
                 }
+
+                // At this point, we want the player to enter critical state
+                RevivalFeatures.SetPlayerCriticalState(player, true, damageType);
+
+                // Block the kill completely
+                return false;
             }
             catch (Exception ex)
             {
